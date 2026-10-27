@@ -49,9 +49,10 @@ section.main > div { max-width:1320px; padding-top:2.1rem; }
 .stButton > button:hover { border-color:var(--moonstone); color:#173d45; background:#e7f4f5; transform:translateY(-2px); box-shadow:0 9px 22px rgba(76,157,176,.16); }
 .stButton > button[kind="primary"] { background:#4C9DB0; color:white; border-color:#4C9DB0; box-shadow:0 8px 18px rgba(76,157,176,.18); }
 .stButton > button[kind="primary"]:hover { background:#347f90; color:white; }
-[data-testid="stSidebar"] [data-testid="stButton"] > button { background:#fff9e8 !important; color:#173d45 !important; border:1px solid rgba(23,61,69,.2) !important; text-align:left; justify-content:flex-start; padding-left:1rem; }
-[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"] { background:#173d45 !important; color:#ffebaf !important; border-color:#173d45 !important; }
-[data-testid="stSidebar"] [data-testid="stButton"] > button:hover { background:#e5f3f1 !important; color:#173d45 !important; transform:translateX(2px); }
+[data-testid="stSidebar"] [data-testid="stButton"] > button, [data-testid="stSidebar"] [data-testid="stButton"] > button * { background:#fff9e8 !important; color:#173d45 !important; border-color:rgba(23,61,69,.2) !important; text-align:left; }
+[data-testid="stSidebar"] [data-testid="stButton"] > button { justify-content:flex-start; padding-left:1rem; }
+[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"], [data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"] * { background:#173d45 !important; color:#ffebaf !important; border-color:#173d45 !important; }
+[data-testid="stSidebar"] [data-testid="stButton"] > button:hover, [data-testid="stSidebar"] [data-testid="stButton"] > button:hover * { background:#e5f3f1 !important; color:#173d45 !important; transform:translateX(2px); }
 .stTextInput input { border-radius:12px; background:#fffefa; border:1px solid #d9ddcb; min-height:3rem; }
 [data-testid="stMetric"] { background:#fffdf5; border:1px solid #e8dfc3; border-radius:15px; padding:1rem 1.1rem; }
 [data-testid="stMetricLabel"] { color:#65777a; font-weight:700; }
@@ -124,13 +125,13 @@ with st.sidebar:
                       "Nightshift configured" if has_token else "Nemotron configured" if has_nvidia else "Offline evidence agent")
     st.markdown(f"<span class='status {'ai' if live_ai else 'offline'}'>{provider_label}</span>", unsafe_allow_html=True)
     sample_mode = _setting("SAMPLE_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
-    st.markdown(f"<p style='font-size:.82rem;margin-top:.7rem;opacity:.88'>Data source Â· {'Sample DuckDB' if sample_mode else 'Zetaris JDBC'}</p>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size:.82rem;margin-top:.7rem;opacity:.88'>Data source  |  {'Sample DuckDB' if sample_mode else 'Zetaris JDBC'}</p>", unsafe_allow_html=True)
     st.divider()
     st.markdown("**Agent team**")
-    st.markdown(f"Planner + SQL investigator Â· {'Meterless Nightshift' if has_token else 'Nemotron / offline'}  \nIndependent skeptic Â· {'NVIDIA Nemotron' if has_nvidia else 'offline reviewer'}  \nExplainer Â· {'Meterless Nightshift' if has_token else 'Nemotron / offline'}")
+    st.markdown(f"Planner + SQL investigator  |  {'Meterless Nightshift' if has_token else 'Nemotron / offline'}  \nIndependent skeptic  |  {'NVIDIA Nemotron' if has_nvidia else 'offline reviewer'}  \nExplainer  |  {'Meterless Nightshift' if has_token else 'Nemotron / offline'}")
     if not has_token or not has_nvidia:
         st.info("For the full live multi-agent team, add Meterless `METERLESS_RUNTIME_TOKEN`, `METERLESS_BASE_URL`, `FAST_MODEL`, `DEEP_MODEL` and NVIDIA `NVIDIA_API_KEY` in Streamlit Secrets. Keep `SAMPLE_MODE = \"true\"` to use DuckDB sample data.")
-        st.markdown("[Get a Nemotron API key â†—](https://build.nvidia.com/nvidia/nemotron-3_5-bolt-e4b)")
+        st.markdown("[Get a Nemotron API key ->](https://build.nvidia.com/nvidia/nemotron-3_5-bolt-e4b)")
     st.caption("Model calls and query steps are logged under `logs/`.")
     with st.expander("2-minute screen-record flow"):
         st.markdown("**0:00** Introduce the revenue question.  \n**0:15** Click *Load the demo question*, then *Investigate with WhyTrace*.  \n**0:55** Read the ranked, verified result.  \n**1:20** Expand SQL evidence and show the provenance chain.  \n**1:45** Close on the agent roles and returns decoy.")
@@ -139,11 +140,11 @@ if st.session_state["page"] == "Overview":
     st.markdown("<div class='brandmark'>THE AGENT THAT CAN EXPLAIN WHY &middot; OPEN AGENT HACKATHON</div><div class='hero landing-hero'><div class='eyebrow'>Evidence-led retail intelligence</div><h1>Follow the change.<br><em>Find the why.</em></h1><p>WhyTrace turns a revenue question into a coordinated investigation: agents plan, query, challenge, and verify the answer against source data.</p><div class='hero-note'>&#10022; &nbsp; Every finding comes with the SQL and rows behind it.</div></div>", unsafe_allow_html=True)
     nav_left, nav_right = st.columns([1, 1])
     with nav_left:
-        if st.button("Start an investigation  â†’", type="primary", key="landing-investigate", width="stretch"):
+        if st.button("Start an investigation  ->", type="primary", key="landing-investigate", width="stretch"):
             st.session_state["page"] = "Investigate"
             st.rerun()
     with nav_right:
-        if st.button("Explore visualizations  â†—", key="landing-visuals", width="stretch"):
+        if st.button("Explore visualizations  ->", key="landing-visuals", width="stretch"):
             st.session_state["page"] = "Visualizations"
             st.rerun()
     st.markdown("<div class='section-title' style='margin-top:2rem'>A clear path from question to evidence</div><div class='subtle'>Your investigation stays idle until you submit a question.</div>", unsafe_allow_html=True)
@@ -158,11 +159,11 @@ if st.session_state["page"] == "Overview":
         st.markdown(f"<div class='recent-card'><div class='eyebrow'>LATEST VERIFIED INVESTIGATION</div><h3>{_lead['title']}</h3><p>{_lead['claim']}</p><span class='status'>{'Verified' if _lead.get('verified') else 'Mismatch'}</span></div>", unsafe_allow_html=True)
 
 elif st.session_state["page"] == "Investigate":
-    st.markdown("<div class='brandmark'>The agent that can explain why Â· Open Agent Hackathon</div><div class='hero'><div class='eyebrow'>Retail revenue intelligence</div><h1>Follow the change.<br><em>Find the why.</em></h1><p>Ask a retail revenue question. WhyTrace coordinates specialized agents, runs the queries, challenges the evidence, and verifies every number before it reaches the report.</p></div>", unsafe_allow_html=True)
+    st.markdown("<div class='brandmark'>The agent that can explain why  |  Open Agent Hackathon</div><div class='hero'><div class='eyebrow'>Retail revenue intelligence</div><h1>Follow the change.<br><em>Find the why.</em></h1><p>Ask a retail revenue question. WhyTrace coordinates specialized agents, runs the queries, challenges the evidence, and verifies every number before it reaches the report.</p></div>", unsafe_allow_html=True)
 
     st.markdown("<div class='section-title'>Start an investigation</div><div class='subtle'>Ask naturally about store revenue, product categories, returns, inventory, or monthly changes in the connected retail data. The examples are starting points; type your own question below.</div>", unsafe_allow_html=True)
-    st.markdown("<div class='process-rail'><span class='process-step'>01 &nbsp; PLAN</span><span class='process-arrow'>â€º</span><span class='process-step'>02 &nbsp; QUERY</span><span class='process-arrow'>â€º</span><span class='process-step'>03 &nbsp; CHALLENGE</span><span class='process-arrow'>â€º</span><span class='process-step'>04 &nbsp; VERIFY</span></div>", unsafe_allow_html=True)
-    guided_demo = st.button("â–¶  Load the 2-minute demo question", key="guided-demo", width="stretch")
+    st.markdown("<div class='process-rail'><span class='process-step'>01 &nbsp; PLAN</span><span class='process-arrow'>></span><span class='process-step'>02 &nbsp; QUERY</span><span class='process-arrow'>></span><span class='process-step'>03 &nbsp; CHALLENGE</span><span class='process-arrow'>></span><span class='process-step'>04 &nbsp; VERIFY</span></div>", unsafe_allow_html=True)
+    guided_demo = st.button("PLAY  Load the 2-minute demo question", key="guided-demo", width="stretch")
     if guided_demo:
         st.session_state["question_input"] = "Why did S3 revenue drop in March 2026?"
     examples = ["Why did S3 revenue drop in March 2026?", "What drove the March revenue change?", "Did returns explain the March decline?"]
@@ -171,13 +172,13 @@ elif st.session_state["page"] == "Investigate":
         if col.button(example, key=f"example-{idx}", width="stretch"):
             st.session_state["question_input"] = example
     with st.form("investigation", border=False):
-        question = st.text_input("Your question", key="question_input", placeholder="Ask about any store, item, category, returns, inventory, or revenue movementâ€¦")
-        submitted = st.form_submit_button("Investigate with WhyTrace  â†’", type="primary", width="stretch")
+        question = st.text_input("Your question", key="question_input", placeholder="Ask about any store, item, category, returns, inventory, or revenue movement...")
+        submitted = st.form_submit_button("Investigate with WhyTrace  ->", type="primary", width="stretch")
     if submitted and question.strip():
         try:
             with st.status("Agent team is thinking through your question...", expanded=True) as progress:
                 st.session_state["report"] = run_agent(question.strip(), on_step=progress.write)
-                progress.update(label="Investigation complete Â· evidence verified", state="complete", expanded=True)
+                progress.update(label="Investigation complete  |  evidence verified", state="complete", expanded=True)
                 st.session_state.pop("provenance", None)
         except Exception as exc:
             st.error(f"The investigation could not complete: {exc}")
@@ -186,16 +187,16 @@ elif st.session_state["page"] == "Investigate":
     if report:
         st.divider()
         ai_mode = not report["agent_mode"].lower().startswith("offline") and "fallback" not in report["agent_mode"].lower()
-        st.markdown(f"<span class='status {'ai' if ai_mode else 'offline'}'>{'Nightshift AI analysis' if ai_mode else 'Deterministic evidence analysis'}</span> &nbsp; <span class='subtle'>Question Â· {report['question']}</span>", unsafe_allow_html=True)
+        st.markdown(f"<span class='status {'ai' if ai_mode else 'offline'}'>{'Nightshift AI analysis' if ai_mode else 'Deterministic evidence analysis'}</span> &nbsp; <span class='subtle'>Question  |  {report['question']}</span>", unsafe_allow_html=True)
         st.markdown("<div class='section-title' style='margin-top:.85rem'>Investigation result</div>", unsafe_allow_html=True)
         if report.get("explanation"):
-            st.markdown(f"<div class='panel claim'>{report['explanation']}<div class='subtle' style='margin-top:.7rem;font-size:.78rem'>Explanation model Â· {report['explanation_model']} Â· Sources are linked below</div></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='panel claim'>{report['explanation']}<div class='subtle' style='margin-top:.7rem;font-size:.78rem'>Explanation model  |  {report['explanation_model']}  |  Sources are linked below</div></div>", unsafe_allow_html=True)
         if report.get("skeptic_review"):
             review = report["skeptic_review"]
             with st.container(border=True):
                 st.markdown("**Independent skeptic review**")
                 st.write(review["review"])
-                st.caption(f"Reviewer Â· {review['model']} Â· {len(review['evidence_ids'])} evidence sources in scope")
+                st.caption(f"Reviewer  |  {review['model']}  |  {len(review['evidence_ids'])} evidence sources in scope")
                 if review.get("contradictions"):
                     st.warning(f"Skeptic flagged {len(review['contradictions'])} possible contradiction(s). Inspect cited rows before relying on the conclusion.")
                 else:
@@ -204,21 +205,21 @@ elif st.session_state["page"] == "Investigate":
             main = report["ranked_drivers"][0]
             metrics = st.columns(3)
             metrics[0].metric("Lead signal", main.get("subject", main.get("store_id", "Revenue")))
-            metrics[1].metric("Focus period", main.get("period", "â€”"))
+            metrics[1].metric("Focus period", main.get("period", "-"))
             metrics[2].metric("Evidence check", "Verified" if main["verified"] else "Mismatch")
             for rank, claim in enumerate(report["ranked_drivers"], 1):
                 with st.container(border=True):
                     left, right = st.columns([5, 1])
-                    left.markdown(f"### {rank:02d} Â· {claim['title']}")
+                    left.markdown(f"### {rank:02d}  |  {claim['title']}")
                     right.markdown(f"<span class='status'>{'Verified' if claim['verified'] else 'Mismatch'}</span>", unsafe_allow_html=True)
                     st.markdown(f"<div class='claim'>{claim['claim']}</div>", unsafe_allow_html=True)
-                    st.caption(f"Confidence {claim['confidence']:.0%} Â· SQL model {claim['model']}")
-                    if st.button("Why do you believe this?  â†“", key=f"why-{rank}"):
+                    st.caption(f"Confidence {claim['confidence']:.0%}  |  SQL model {claim['model']}")
+                    if st.button("Why do you believe this?  v", key=f"why-{rank}"):
                         st.session_state["provenance"] = claim["evidence_ids"]
                     for eid in claim["evidence_ids"]:
                         ev = WorldStoreService().get(eid)
                         if ev:
-                            with st.expander(f"Evidence {eid} Â· {ev['row_count']} result rows"):
+                            with st.expander(f"Evidence {eid}  |  {ev['row_count']} result rows"):
                                 st.code(ev["sql"], language="sql")
                                 st.dataframe(ev["rows"], width="stretch", hide_index=True)
         else:
@@ -227,7 +228,7 @@ elif st.session_state["page"] == "Investigate":
         if report.get("ruled_out"):
             st.markdown("<div class='section-title' style='margin-top:1.6rem'>Other signals checked</div><div class='subtle'>Alternative explanations stay visible with their supporting query evidence.</div>", unsafe_allow_html=True)
             for idx, claim in enumerate(report["ruled_out"]):
-                with st.expander(f"{'âœ“' if claim['verified'] else 'Â·'}  {claim['title']}  Â·  {claim['model']}"):
+                with st.expander(f"{'OK' if claim['verified'] else ' | '}  {claim['title']}   |   {claim['model']}"):
                     st.write(claim["claim"])
                     st.caption("Verified cited values" if claim["verified"] else "A cited value did not match on recheck")
                     if st.button("Show provenance chain", key=f"why-other-{idx}"):
@@ -242,7 +243,7 @@ elif st.session_state["page"] == "Investigate":
             st.markdown("<div class='section-title' style='margin-top:1.5rem'>Claim provenance</div>", unsafe_allow_html=True)
             for ev in report["context"]["provenance"]:
                 if ev["evidence_id"] in st.session_state["provenance"]:
-                    st.markdown(f"**Claim â†’ `{ev['evidence_id']}` â†’ {ev['source']} â†’ {ev['model']}**")
+                    st.markdown(f"**Claim -> `{ev['evidence_id']}` -> {ev['source']} -> {ev['model']}**")
                     st.code(ev["sql"], language="sql")
                     evidence = WorldStoreService().get(ev["evidence_id"])
                     if evidence:
@@ -251,20 +252,20 @@ elif st.session_state["page"] == "Investigate":
         st.markdown("<div class='section-title' style='margin-top:1.5rem'>Recommended next steps</div>", unsafe_allow_html=True)
         for idx, action in enumerate(report["recommended_actions"], 1):
             st.markdown(f"**{idx}.** {action}")
-        with st.expander("Investigation trace Â· plan, SQL, models, row counts"):
-            st.caption(f"Planning model Â· {report['model_plan']}")
+        with st.expander("Investigation trace  |  plan, SQL, models, row counts"):
+            st.caption(f"Planning model  |  {report['model_plan']}")
             for step in report["hypotheses"]:
-                st.markdown(f"**{step['name']}** Â· {step['model']} Â· {len(step['rows'])} rows")
+                st.markdown(f"**{step['name']}**  |  {step['model']}  |  {len(step['rows'])} rows")
                 st.code(step["sql"], language="sql")
-            st.markdown(f"**Independent skeptic** Â· {report['skeptic_review']['model']}")
-            st.markdown(f"**Evidence explainer** Â· {report['explanation_model']}")
+            st.markdown(f"**Independent skeptic**  |  {report['skeptic_review']['model']}")
+            st.markdown(f"**Evidence explainer**  |  {report['explanation_model']}")
 
 elif st.session_state["page"] == "Visualizations":
     st.markdown("<div class='brandmark'>WHYTRACE / EVIDENCE VISUALS</div><div class='hero visual-hero'><div class='eyebrow'>Signals, made visible</div><h1>See the shape<br><em>of the change.</em></h1><p>Charts here are built from the same query evidence as the written report. Run an investigation to animate its verified trend.</p></div>", unsafe_allow_html=True)
     _visual_report = st.session_state.get("report")
     if not _visual_report:
         st.markdown("<div class='empty-visual'><div class='visual-orb'>&#10022;</div><h2>Your evidence canvas is ready</h2><p>Start an investigation to populate the charts with verified retail data. Opening this page does not run queries.</p></div>", unsafe_allow_html=True)
-        if st.button("Go to Investigate  â†’", type="primary", key="visuals-investigate"):
+        if st.button("Go to Investigate  ->", type="primary", key="visuals-investigate"):
             st.session_state["page"] = "Investigate"
             st.rerun()
     else:
@@ -297,7 +298,7 @@ elif st.session_state["page"] == "Visualizations":
         if _visual_report.get("ruled_out"):
             with st.expander("Ruled-out signals | keep the decoy in view"):
                 for _claim in _visual_report["ruled_out"]:
-                    st.markdown(f"**{_claim['title']}** Â· {'Verified' if _claim.get('verified') else 'Mismatch'}  \n{_claim['claim']}")
+                    st.markdown(f"**{_claim['title']}**  |  {'Verified' if _claim.get('verified') else 'Mismatch'}  \n{_claim['claim']}")
                     for _eid in _claim.get("evidence_ids", []):
                         _ev = WorldStoreService().get(_eid)
                         if _ev:
