@@ -21,6 +21,10 @@ Copy-Item .env.example .env
 
 Run the app with `streamlit run app.py`. By default, `SAMPLE_MODE=true` uses the deterministic local DuckDB dataset and the offline templated model path. You can also use the three sample questions in the app.
 
+## Deploy a shareable demo
+
+The app is ready for Streamlit Community Cloud in sample mode. Sign in at [share.streamlit.io](https://share.streamlit.io/) with the GitHub account that can access this repository, choose **Create app**, then select repository `ramcharanlugalapu81/WhyTrace`, branch `main`, and entrypoint `app.py`. Choose Python 3.11 in advanced settings if offered, leave secrets empty for the sample demo, and click **Deploy**. `SAMPLE_MODE` defaults to true, so the hosted demo uses DuckDB and offline model templates without Zetaris or Nightshift credentials. Community Cloud must be connected to the GitHub account and the deploy button must be clicked by an account owner; this repository does not include cloud credentials.
+
 Run tests with `pytest tests/test_world_model.py` (or `pytest` for the full suite).
 
 ## Zetaris and Meterless Nightshift
