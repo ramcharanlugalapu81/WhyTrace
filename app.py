@@ -1,72 +1,163 @@
 from __future__ import annotations
 
-import json
 import os
-from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
 
+load_dotenv()
+
+# Community Cloud stores deployment values in st.secrets rather than process env.
+for _key in ("SAMPLE_MODE", "METERLESS_BASE_URL", "METERLESS_RUNTIME_TOKEN", "FAST_MODEL", "DEEP_MODEL",
+             "ZETARIS_JDBC_URL", "ZETARIS_USERNAME", "ZETARIS_PASSWORD", "ZETARIS_JDBC_JAR"):
+    if not os.getenv(_key):
+        try:
+            if _key in st.secrets:
+                os.environ[_key] = str(st.secrets[_key])
+        except Exception:
+            pass
+
 from whytrace.agent import run_agent
+from whytrace.llm import _setting
 from whytrace.world_model.store import WorldStoreService
 
-load_dotenv()
-st.set_page_config(page_title="WhyTrace", page_icon="🔎", layout="wide")
-st.title("WhyTrace")
-st.caption("Explain why a retail revenue metric changed, with every claim tied to query evidence.")
-sample_mode = os.getenv("SAMPLE_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
-st.sidebar.success("SAMPLE_MODE · DuckDB" if sample_mode else "REAL MODE · Zetaris JDBC")
+
+st.set_page_config(page_title="WhyTrace | Revenue intelligence", page_icon="W", layout="wide", initial_sidebar_state="expanded")
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Manrope:wght@400;500;600;700;800&display=swap');
+:root { --vanilla:#FFEBAF; --moonstone:#4C9DB0; --ink:#17333a; --muted:#61757a; --paper:#fffdf5; --line:#e8dfc3; --deep:#173d45; }
+html, body, [class*="css"] { font-family:'Manrope',sans-serif; color:var(--ink); }
+.stApp { background:linear-gradient(180deg,#fff9e8 0%,#fffdf6 54%,#fff9e8 100%); }
+[data-testid="stHeader"] { background:transparent; }
+[data-testid="stSidebar"] { background:#4C9DB0; border-right:1px solid rgba(23,51,58,.12); }
+[data-testid="stSidebar"] * { color:#fffdf5; }
+[data-testid="stSidebar"] [data-testid="stMetricValue"] { color:var(--vanilla); }
+section.main > div { max-width:1320px; padding-top:2.1rem; }
+.brandmark { font-size:.73rem; font-weight:800; letter-spacing:.2em; text-transform:uppercase; color:#438b9b; margin-bottom:1rem; }
+.hero { background:var(--vanilla); border:1px solid #eadb9f; border-radius:24px; padding:2.1rem 2.4rem; margin:0 0 1.5rem 0; box-shadow:0 12px 32px rgba(89,91,52,.06); }
+.hero h1 { font-family:'DM Serif Display',Georgia,serif; font-size:clamp(2.6rem,5vw,4.3rem); line-height:.99; letter-spacing:-.035em; color:#173d45; margin:0 0 .65rem 0; }
+.hero h1 em { color:#4C9DB0; font-style:italic; }
+.hero p { max-width:680px; font-size:1rem; line-height:1.65; color:#526b6d; margin:0; }
+.eyebrow { font-size:.72rem; letter-spacing:.16em; text-transform:uppercase; color:#54858b; font-weight:800; margin-bottom:.75rem; }
+.panel { background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:1.35rem 1.5rem; }
+.section-title { font-family:'DM Serif Display',Georgia,serif; font-size:1.8rem; color:var(--deep); margin:.2rem 0 .3rem 0; }
+.subtle { color:var(--muted); font-size:.9rem; }
+.stButton > button { border-radius:12px; border:1px solid #c6dce0; background:#f4fbfb; color:#285d67; font-weight:700; min-height:2.8rem; transition:all .18s ease; }
+.stButton > button:hover { border-color:var(--moonstone); color:#173d45; background:#e7f4f5; transform:translateY(-1px); }
+.stButton > button[kind="primary"] { background:#4C9DB0; color:white; border-color:#4C9DB0; box-shadow:0 8px 18px rgba(76,157,176,.18); }
+.stButton > button[kind="primary"]:hover { background:#347f90; color:white; }
+.stTextInput input { border-radius:12px; background:#fffefa; border:1px solid #d9ddcb; min-height:3rem; }
+[data-testid="stMetric"] { background:#fffdf5; border:1px solid #e8dfc3; border-radius:15px; padding:1rem 1.1rem; }
+[data-testid="stMetricLabel"] { color:#65777a; font-weight:700; }
+[data-testid="stMetricValue"] { color:#173d45; font-family:'DM Serif Display',Georgia,serif; }
+[data-testid="stExpander"] { background:#fffdf8; border:1px solid #e7e0cd; border-radius:14px; }
+.status { display:inline-block; padding:.33rem .65rem; border-radius:999px; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; font-weight:800; background:#e3f1e8; color:#326c51; }
+.status.ai { background:#dceff2; color:#246676; }
+.status.offline { background:#fff0cf; color:#8b6422; }
+.claim { font-size:1.08rem; line-height:1.65; color:#28484c; }
+.stSuccess, .stAlert { border-radius:12px; }
+hr { border-color:#e8dfc3; }
+footer { visibility:hidden; }
+</style>
+""", unsafe_allow_html=True)
+
+with st.sidebar:
+    st.markdown("<div style='font-family:DM Serif Display,Georgia,serif;font-size:2rem;line-height:1;color:#fffdf5'>WhyTrace</div><div style='opacity:.82;margin-top:.4rem;font-size:.82rem'>Evidence-led retail intelligence</div>", unsafe_allow_html=True)
+    st.divider()
+    has_token = bool(_setting("METERLESS_RUNTIME_TOKEN").strip())
+    live_ai = has_token
+    st.markdown(f"<span class='status {'ai' if live_ai else 'offline'}'>{'Nightshift configured' if live_ai else 'Offline evidence agent'}</span>", unsafe_allow_html=True)
+    sample_mode = _setting("SAMPLE_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
+    st.markdown(f"<p style='font-size:.82rem;margin-top:.7rem;opacity:.88'>Data source · {'Sample DuckDB' if sample_mode else 'Zetaris JDBC'}</p>", unsafe_allow_html=True)
+    st.divider()
+    st.markdown("**How this agent works**")
+    st.markdown("1. Plans investigations\n2. Writes and runs read-only SQL\n3. Saves query evidence\n4. Rechecks every cited number")
+    if not has_token:
+        st.info("To turn on live AI, add `METERLESS_RUNTIME_TOKEN`, `METERLESS_BASE_URL`, `FAST_MODEL`, and `DEEP_MODEL` in your app's Streamlit Secrets. Sample mode can stay on while the model investigates DuckDB.")
+    st.caption("Model calls and query steps are logged under `logs/`.")
+
+st.markdown("<div class='brandmark'>Retail intelligence · powered by evidence</div><div class='hero'><div class='eyebrow'>A better answer to “what changed?”</div><h1>Follow the change.<br><em>Find the why.</em></h1><p>Ask a retail revenue question. WhyTrace plans the investigation, runs the queries, and verifies every number before it reaches the report.</p></div>", unsafe_allow_html=True)
+
+st.markdown("<div class='section-title'>Start an investigation</div><div class='subtle'>Pick a guided question or ask your own.</div>", unsafe_allow_html=True)
 examples = ["Why did S3 revenue drop in March 2026?", "What drove the March revenue change?", "Did returns explain the March decline?"]
-st.subheader("Try a sample question")
-buttons = st.columns(3)
-chosen = None
-for col, question in zip(buttons, examples):
-    if col.button(question, use_container_width=True):
-        chosen = question
-question = st.text_input("Ask about a retail revenue change", value=chosen or "")
-if st.button("Explain change", type="primary", disabled=not question.strip()):
-    with st.spinner("Gathering and verifying query evidence…"):
-        st.session_state["report"] = run_agent(question.strip())
+cols = st.columns(3)
+for idx, (col, example) in enumerate(zip(cols, examples)):
+    if col.button(example, key=f"example-{idx}", width="stretch"):
+        st.session_state["question_input"] = example
+with st.form("investigation", border=False):
+    question = st.text_input("Your question", key="question_input", placeholder="e.g. Why did revenue fall at S3 in March 2026?")
+    submitted = st.form_submit_button("Investigate with WhyTrace  →", type="primary", width="stretch")
+if submitted and question.strip():
+    try:
+        with st.status("WhyTrace is investigating your question…", expanded=True) as progress:
+            st.session_state["report"] = run_agent(question.strip(), on_step=progress.write)
+            progress.update(label="Investigation complete · evidence verified", state="complete", expanded=False)
+            st.session_state.pop("provenance", None)
+    except Exception as exc:
+        st.error(f"The investigation could not complete: {exc}")
 
 report = st.session_state.get("report")
 if report:
     st.divider()
-    st.subheader("Ranked drivers")
-    store = WorldStoreService()
-    all_claims = report["ranked_drivers"] + report["ruled_out"]
-    for rank, claim in enumerate(report["ranked_drivers"], 1):
-        with st.container(border=True):
-            st.markdown(f"### {rank}. {claim['title']}")
-            st.write(claim["claim"])
-            st.caption(f"Confidence {claim['confidence']:.0%} · Model used: {claim['model']}")
-            st.success("Verified" if claim["verified"] else "Mismatch detected")
-            if st.button("Why do you believe this?", key=f"why-{rank}"):
-                st.session_state["provenance"] = claim["evidence_ids"]
-            for eid in claim["evidence_ids"]:
-                ev = store.get(eid)
-                if ev:
-                    with st.expander(f"Evidence {eid} · {ev['row_count']} rows"):
-                        st.code(ev["sql"], language="sql")
-                        st.json(ev["rows"])
-    if report["ruled_out"]:
-        st.subheader("Ruled out / lower priority")
-        for i, claim in enumerate(report["ruled_out"]):
-            with st.expander(f"{claim['title']} · {'Verified' if claim['verified'] else 'Mismatch'} · Model: {claim['model']}"):
-                st.write(claim["claim"])
+    ai_mode = report["agent_mode"] == "Meterless Nightshift"
+    st.markdown(f"<span class='status {'ai' if ai_mode else 'offline'}'>{'Nightshift AI analysis' if ai_mode else 'Deterministic evidence analysis'}</span> &nbsp; <span class='subtle'>Question · {report['question']}</span>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title' style='margin-top:.85rem'>Investigation result</div>", unsafe_allow_html=True)
+    if report.get("explanation"):
+        st.markdown(f"<div class='panel claim'>{report['explanation']}<div class='subtle' style='margin-top:.7rem;font-size:.78rem'>Explanation model · {report['explanation_model']} · Sources are linked below</div></div>", unsafe_allow_html=True)
+    if report["ranked_drivers"]:
+        main = report["ranked_drivers"][0]
+        metrics = st.columns(3)
+        metrics[0].metric("Lead signal", main.get("store_id", "Revenue"))
+        metrics[1].metric("Focus period", main.get("period", "—"))
+        metrics[2].metric("Evidence check", "Verified" if main["verified"] else "Mismatch")
+        for rank, claim in enumerate(report["ranked_drivers"], 1):
+            with st.container(border=True):
+                left, right = st.columns([5, 1])
+                left.markdown(f"### {rank:02d} · {claim['title']}")
+                right.markdown(f"<span class='status'>{'Verified' if claim['verified'] else 'Mismatch'}</span>", unsafe_allow_html=True)
+                st.markdown(f"<div class='claim'>{claim['claim']}</div>", unsafe_allow_html=True)
+                st.caption(f"Confidence {claim['confidence']:.0%} · SQL model {claim['model']}")
+                if st.button("Why do you believe this?  ↓", key=f"why-{rank}"):
+                    st.session_state["provenance"] = claim["evidence_ids"]
                 for eid in claim["evidence_ids"]:
-                    ev = store.get(eid)
+                    ev = WorldStoreService().get(eid)
+                    if ev:
+                        with st.expander(f"Evidence {eid} · {ev['row_count']} result rows"):
+                            st.code(ev["sql"], language="sql")
+                            st.dataframe(ev["rows"], width="stretch", hide_index=True)
+    else:
+        st.warning("The queries ran, but the available rows did not support a month-over-month driver. Open the evidence below to inspect the returned data.")
+
+    if report.get("ruled_out"):
+        st.markdown("<div class='section-title' style='margin-top:1.6rem'>Other signals checked</div><div class='subtle'>Alternative explanations stay visible with their supporting query evidence.</div>", unsafe_allow_html=True)
+        for idx, claim in enumerate(report["ruled_out"]):
+            with st.expander(f"{'✓' if claim['verified'] else '·'}  {claim['title']}  ·  {claim['model']}"):
+                st.write(claim["claim"])
+                st.caption("Verified cited values" if claim["verified"] else "A cited value did not match on recheck")
+                if st.button("Show provenance chain", key=f"why-other-{idx}"):
+                    st.session_state["provenance"] = claim["evidence_ids"]
+                for eid in claim["evidence_ids"]:
+                    ev = WorldStoreService().get(eid)
                     if ev:
                         st.code(ev["sql"], language="sql")
-                        st.json(ev["rows"])
-                if st.button("Why do you believe this?", key=f"why-ruled-{i}"):
-                    st.session_state["provenance"] = claim["evidence_ids"]
+                        st.dataframe(ev["rows"], width="stretch", hide_index=True)
+
     if st.session_state.get("provenance"):
-        st.subheader("Provenance chain")
+        st.markdown("<div class='section-title' style='margin-top:1.5rem'>Claim provenance</div>", unsafe_allow_html=True)
         for ev in report["context"]["provenance"]:
             if ev["evidence_id"] in st.session_state["provenance"]:
-                st.markdown(f"Claim → `{ev['evidence_id']}` → **{ev['source']}** → model `{ev['model']}`")
+                st.markdown(f"**Claim → `{ev['evidence_id']}` → {ev['source']} → {ev['model']}**")
                 st.code(ev["sql"], language="sql")
-    with st.expander("Model steps"):
-        st.write(f"Plan · Model used: {report['model_plan']}")
+                evidence = WorldStoreService().get(ev["evidence_id"])
+                if evidence:
+                    st.dataframe(evidence["rows"], width="stretch", hide_index=True)
+
+    st.markdown("<div class='section-title' style='margin-top:1.5rem'>Recommended next steps</div>", unsafe_allow_html=True)
+    for idx, action in enumerate(report["recommended_actions"], 1):
+        st.markdown(f"**{idx}.** {action}")
+    with st.expander("Investigation trace · plan, SQL, models, row counts"):
+        st.caption(f"Planning model · {report['model_plan']}")
         for step in report["hypotheses"]:
-            st.write(f"{step['name']} · Model used: {step['model']} · {len(step['rows'])} rows")
+            st.markdown(f"**{step['name']}** · {step['model']} · {len(step['rows'])} rows")
+            st.code(step["sql"], language="sql")

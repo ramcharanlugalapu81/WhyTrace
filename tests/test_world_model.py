@@ -14,6 +14,16 @@ def test_idempotent_ingest(tmp_path):
     assert len(store.all()) == 1
 
 
+def test_same_query_refreshes_rows_and_source_without_duplicate(tmp_path):
+    store = WorldStoreService(tmp_path / "evidence.jsonl")
+    first = store.upsert({"sql": "SELECT 1 AS n", "rows": [{"n": 1}], "source": "duckdb"})
+    refreshed = store.upsert({"sql": "SELECT 1 AS n", "rows": [{"n": 2}], "source": "zetaris"})
+    assert refreshed["evidence_id"] == first["evidence_id"]
+    assert refreshed["rows"] == [{"n": 2}]
+    assert refreshed["source"] == "zetaris"
+    assert len(store.all()) == 1
+
+
 def test_claim_resolves_to_source_query(tmp_path):
     store = WorldStoreService(tmp_path / "evidence.jsonl")
     record = store.upsert({"sql": "SELECT 42 AS answer", "rows": [{"answer": 42}]})

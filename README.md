@@ -19,11 +19,21 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Run the app with `streamlit run app.py`. By default, `SAMPLE_MODE=true` uses the deterministic local DuckDB dataset and the offline templated model path. You can also use the three sample questions in the app.
+Run the app with `streamlit run app.py`. By default, `SAMPLE_MODE=true` uses the deterministic local DuckDB dataset. If `METERLESS_RUNTIME_TOKEN` is configured, the agent uses Nightshift for hypothesis planning, SQL generation, and its evidence-grounded explanation while keeping data local. Without a token, it clearly labels and uses the deterministic offline evidence agent. You can try the three sample questions in the app.
 
 ## Deploy a shareable demo
 
-The app is ready for Streamlit Community Cloud in sample mode. Sign in at [share.streamlit.io](https://share.streamlit.io/) with the GitHub account that can access this repository, choose **Create app**, then select repository `ramcharanlugalapu81/WhyTrace`, branch `main`, and entrypoint `app.py`. Choose Python 3.11 in advanced settings if offered, leave secrets empty for the sample demo, and click **Deploy**. `SAMPLE_MODE` defaults to true, so the hosted demo uses DuckDB and offline model templates without Zetaris or Nightshift credentials. Community Cloud must be connected to the GitHub account and the deploy button must be clicked by an account owner; this repository does not include cloud credentials.
+The app is ready for Streamlit Community Cloud in sample mode. Sign in at [share.streamlit.io](https://share.streamlit.io/) with the GitHub account that can access this repository, choose **Create app**, then select repository `ramcharanlugalapu81/WhyTrace`, branch `main`, and entrypoint `app.py`. Choose Python 3.11 in advanced settings if offered, then click **Deploy**. `SAMPLE_MODE` defaults to true, so the hosted app uses DuckDB sample data. Without a token it runs the deterministic evidence agent and labels that mode clearly. To enable live Nightshift planning, SQL generation, and explanation while keeping sample data, add these values under the app's **Settings > Secrets**:
+
+```toml
+SAMPLE_MODE = "true"
+METERLESS_BASE_URL = "https://your-meterless-endpoint"
+METERLESS_RUNTIME_TOKEN = "your-runtime-token"
+FAST_MODEL = "your-fast-model"
+DEEP_MODEL = "your-deep-model"
+```
+
+The app reads Streamlit Secrets directly. Zetaris JDBC credentials are only needed if you also set `SAMPLE_MODE = "false"`. Community Cloud must be connected to the GitHub account and the deploy button must be clicked by an account owner; cloud credentials are not stored in this repository.
 
 Run tests with `pytest tests/test_world_model.py` (or `pytest` for the full suite).
 
@@ -31,7 +41,7 @@ Run tests with `pytest tests/test_world_model.py` (or `pytest` for the full suit
 
 To run against a real environment, set `SAMPLE_MODE=false`, then configure `ZETARIS_JDBC_URL`, `ZETARIS_USERNAME`, `ZETARIS_PASSWORD`, and `ZETARIS_JDBC_JAR` in `.env`. Install the optional JDBC bridge with `pip install -r requirements-zetaris.txt`; a working Java runtime, Zetaris JDBC driver, network access, credentials, and compatible source schema are also required. Queries are restricted to a single read-only `SELECT` or `WITH` statement.
 
-Configure `METERLESS_BASE_URL`, `METERLESS_RUNTIME_TOKEN`, `FAST_MODEL`, and `DEEP_MODEL` for the OpenAI-compatible Meterless Nightshift endpoint. Fast generation supplies query SQL; deep generation supplies the initial hypothesis plan. Sample mode or a missing token selects deterministic offline templates. A configured endpoint/model/schema must support the prompts and table/column names used by WhyTrace for real model-driven runs; this starter's report interpretation is tailored to the supplied retail question and sample signal. This repository does not validate an external Zetaris or Nightshift account.
+Configure `METERLESS_BASE_URL`, `METERLESS_RUNTIME_TOKEN`, `FAST_MODEL`, and `DEEP_MODEL` for the OpenAI-compatible Meterless Nightshift endpoint. Fast generation writes SQL; deep generation plans investigations and produces a grounded explanation from query results. With no token, the evidence pipeline stays runnable using deterministic offline templates. A configured endpoint/model/schema must support the prompts and table/column names used by WhyTrace for real model-driven runs; the report ranking is calculated from query results and does not accept model-invented measurements. This repository does not validate an external Zetaris or Nightshift account.
 
 ## Samples and logs
 

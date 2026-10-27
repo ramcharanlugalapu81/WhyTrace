@@ -43,9 +43,16 @@ class WorldStoreService:
         record["row_count"] = len(record.get("rows", []))
         with self._lock:
             records = self.all()
-            if not any(r["evidence_id"] == record["evidence_id"] for r in records):
+            existing = next((i for i, r in enumerate(records) if r["evidence_id"] == record["evidence_id"]), None)
+            if existing is None:
                 records.append(record)
                 self._atomic_write(records)
+            else:
+                previous = records[existing]
+                comparable = ("sql", "params", "rows", "row_count", "source", "model")
+                if any(previous.get(key) != record.get(key) for key in comparable):
+                    records[existing] = record
+                    self._atomic_write(records)
         return self.get(record["evidence_id"])
 
     def _atomic_write(self, records: list[dict]) -> None:
