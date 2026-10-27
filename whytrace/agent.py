@@ -104,20 +104,23 @@ def _question_intent(question: str) -> str:
         return "returns"
     if any(word in q for word in ("inventory", "stock level", "stockout")) and not any(word in q for word in ("explain", "account for", "cause", "drive")):
         return "inventory"
-    if any(word in q for word in ("category", "categories", "product mix", "item mix", "which product")):
+    if any(word in q for word in ("category", "categories", "product mix", "item mix")):
         return "category"
+    if re.search(r"\b(item|sku)\b|best.sell|top.sell|which product", q):
+        return "item"
     return "store"
 
 
 def _dimension_driver(question: str, intent: str, results: list[dict]):
     spec = {"returns": ("return", "category", "return_amount", "return"),
             "category": ("category", "category", "revenue", "revenue"),
+            "item": ("item", "item_id", "revenue", "item revenue"),
             "inventory": ("inventory", "store_id", "inventory_qty", "units")}.get(intent)
     if not spec:
         return None
     marker, key, value_col, unit = spec
     result = next((r for r in results if marker in (r["name"] + r["question"]).lower()
-                   and r["rows"] and value_col in r["rows"][0]), None)
+                   and r["rows"] and key in r["rows"][0] and value_col in r["rows"][0]), None)
     if result is None:
         return None
     rows = result["rows"]
@@ -126,7 +129,7 @@ def _dimension_driver(question: str, intent: str, results: list[dict]):
         return None
     focus_month, focus_year = month, year
     prior_month, prior_year = ((month - 1, year) if month > 1 else (12, year - 1))
-    target_match = re.search(r"\b(S\d+|Electronics|Home|Apparel)\b", question, re.I)
+    target_match = re.search(r"\b(S\d+|I\d+|Electronics|Home|Apparel)\b", question, re.I)
     target = target_match.group(1).lower() if target_match else None
     pairs = []
     for idx, row in enumerate(rows):
@@ -142,7 +145,9 @@ def _dimension_driver(question: str, intent: str, results: list[dict]):
     if not pairs:
         return None
     q = question.lower()
-    if any(word in q for word in ("grow", "increase", "rise", "higher", "up")):
+    if any(word in q for word in ("best selling", "best-selling", "top selling", "top-selling", "sold the most", "highest sales")):
+        pair = max(pairs, key=lambda p: p[5])
+    elif any(word in q for word in ("grow", "increase", "rise", "higher", "up")):
         pair = max(pairs)
     elif any(word in q for word in ("drop", "fall", "decrease", "decline", "lower", "down", "lose")):
         pair = min(pairs)
@@ -154,7 +159,10 @@ def _dimension_driver(question: str, intent: str, results: list[dict]):
     if unit == "return":
         claim = f"{label} returns moved from ${before_value:,.0f} to ${after_value:,.0f} month over month."
     elif unit == "revenue":
-        claim = f"{label} category revenue moved from ${before_value:,.0f} to ${after_value:,.0f} month over month."
+        noun = "item" if intent == "item" else "category"
+        claim = f"{label} {noun} revenue moved from ${before_value:,.0f} to ${after_value:,.0f} month over month."
+    elif intent == "item":
+        claim = f"{label} item revenue moved from ${before_value:,.0f} to ${after_value:,.0f} month over month."
     else:
         claim = f"{label} average inventory moved from {before_value:,.0f} to {after_value:,.0f} units month over month."
     eid = result["evidence"]["evidence_id"]
@@ -176,9 +184,11 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
     store = store or WorldStoreService()
     ingest = IngestPipelineService(store=store)
     evidence_source = "duckdb" if _setting("SAMPLE_MODE", "true").strip().lower() in {"1", "true", "yes", "on"} else "zetaris"
-    plan_prompt = ("Plan exactly 4 diverse, testable SQL investigations for the user's retail metric question. "
+    announce("Planner agent is reading the question and mapping the retail evidence to check")
+    plan_prompt = ("Plan 4 diverse, testable SQL investigations for the user's retail metric question. "
                    "Return only JSON: {\"hypotheses\":[{\"name\":string,\"question\":string}]}. "
-                   "Include store revenue, returns, product category sales, and inventory.\nQUESTION: " + question)
+                   "Cover the question's primary metric first, then use complementary store revenue, returns, product category, or inventory checks as relevant. "
+                   "If the question asks for an item or SKU, investigate item-level sales.\nQUESTION: " + question)
     plan_text, plan_model = generator("deep", plan_prompt)
     _append_trace(trace_path, "plan", plan_model)
     announce(f"Investigation plan ready · {plan_model}")
@@ -190,19 +200,23 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
             {"name": "Product mix trend", "question": "Compare monthly net sales by item category."},
             {"name": "Inventory trend", "question": "Compare monthly inventory by store."},
         ]
+    if re.search(r"\b(item|sku)\b|best.sell|top.sell", question, re.I) and not any("item" in str(h.get("name", "")).lower() for h in hypotheses):
+        hypotheses.append({"name": "Item sales trend", "question": "Compare monthly net sales by item ID and category."})
 
     results = []
     for idx, hypothesis in enumerate(hypotheses[:5]):
         name = str(hypothesis.get("name", f"Hypothesis {idx + 1}"))
         prompt = str(hypothesis.get("question", ""))
-        announce(f"Testing hypothesis {idx + 1}/{min(len(hypotheses), 5)} · {name}")
+        announce(f"SQL investigator is drafting a read-only query · {name}")
         sql_prompt = ("Write exactly one read-only SQL query for this test. Return SQL only, no commentary or markdown. "
                      f"Use only this schema: {SCHEMA}\nHypothesis: {name}\nTest: {prompt}\n"
                      "For store revenue, return aliases store_id, year, month, revenue, prior_revenue, pct_change. "
                      "For returns, return category, year, month, return_amount. For category sales return category, year, month, revenue. "
-                     "For inventory return store_id, year, month, inventory_qty. Include the focus month and its immediately preceding month; do not filter away the comparison period.")
+                     "For item sales return item_id, category, year, month, revenue. For inventory return store_id, year, month, inventory_qty. "
+                     "Include the focus month and its immediately preceding month; do not filter away the comparison period.")
         sql_text, model = generator("fast", sql_prompt)
         sql = _sql_text(sql_text)
+        announce(f"Evidence runner is executing the query · {model}")
         try:
             rows = query_fn(sql)
         except Exception:
@@ -213,6 +227,10 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
         if "store" in name.lower() and "inventory" not in name.lower() and rows and not {"store_id", "year", "month", "revenue", "pct_change"}.issubset(rows[0]):
             from whytrace.llm import _offline
             sql, model = _offline("fast", "monthly net sales by store")
+            rows = query_fn(sql)
+        if "item" in name.lower() and rows and not {"item_id", "category", "year", "month", "revenue"}.issubset(rows[0]):
+            from whytrace.llm import _offline
+            sql, model = _offline("fast", "HYPOTHESIS: item sales by item ID")
             rows = query_fn(sql)
         evidence = ingest.ingest({"sql": sql, "rows": rows, "model": model, "source": evidence_source})
         _append_trace(trace_path, f"query:{name}", model, sql, len(rows))
@@ -305,7 +323,7 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
                       "driver": drivers[0]["title"] if drivers else "no month-over-month change could be verified",
                       "evidence_ids": evidence_ids,
                       "returns_check": ruled[0]["title"] if ruled and return_result else "returns were not conclusive"}
-    announce("Skeptic agent is independently reviewing the evidence")
+    announce("Nemotron skeptic is checking the evidence for unsupported conclusions")
     skeptic_prompt = ("You are the independent skeptic in a multi-agent retail analytics team. "
                       "Check whether the proposed result is actually supported by the supplied query rows. "
                       "Do not invent facts, numbers, causes, or new claims. Return only JSON with keys status, review, contradictions. "
@@ -320,13 +338,16 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
                       "contradictions": skeptic_payload.get("contradictions", []),
                       "model": skeptic_model, "evidence_ids": evidence_ids}
     _append_trace(trace_path, "skeptic_review", skeptic_model)
+    announce("Explainer agent is drafting a source-grounded answer")
     explain_prompt = "EXPLANATION:\n" + json.dumps(answer_context)
     explanation, explanation_model = generator("deep", explain_prompt)
+    announce(f"Evidence explanation ready - {explanation_model}")
     _append_trace(trace_path, "explanation", explanation_model)
     announce("Re-running cited SQL and checking claim values")
     actions = {
         "returns": ["Inspect the category's return reasons and product quality signals.", "Compare return rates against unit sales before changing policy."],
         "category": ["Review promotions, pricing, and availability for the category.", "Compare the category's contribution with the total store trend."],
+        "item": ["Review the item's pricing, promotion, and availability during the comparison period.", "Check whether category-level performance supports the item trend."],
         "inventory": ["Check replenishment timing and stockout events for the affected store.", "Compare average on-hand stock with the sales trend before changing orders."],
         "store": ["Inspect the affected store's staffing, stock availability, and promotions for the focus month.", "Review the returns evidence before taking action."],
     }[intent]

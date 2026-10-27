@@ -331,7 +331,7 @@
         ],
         "source": "duckdb",
         "sql": "WITH monthly AS (SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN store s ON ss.ss_store_sk=s.s_store_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3) SELECT store_id, year, month, revenue, LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month) AS prior_revenue, ROUND(100.0*(revenue-LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month))/NULLIF(LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month),0),2) AS pct_change FROM monthly ORDER BY store_id,year,month",
-        "timestamp": "2026-10-27T19:33:13.843882+00:00"
+        "timestamp": "2026-10-27T19:44:01.515431+00:00"
       }
     },
     {
@@ -458,7 +458,7 @@
         ],
         "source": "duckdb",
         "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(sr.sr_return_amt) AS return_amount FROM store_returns sr JOIN item i ON sr.sr_item_sk=i.i_item_sk JOIN date_dim d ON sr.sr_returned_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
-        "timestamp": "2026-10-27T19:33:13.861078+00:00"
+        "timestamp": "2026-10-27T19:44:01.540194+00:00"
       }
     },
     {
@@ -585,7 +585,7 @@
         ],
         "source": "duckdb",
         "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN item i ON ss.ss_item_sk=i.i_item_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
-        "timestamp": "2026-10-27T19:33:13.878289+00:00"
+        "timestamp": "2026-10-27T19:44:01.555678+00:00"
       }
     },
     {
@@ -712,7 +712,7 @@
         ],
         "source": "duckdb",
         "sql": "SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, AVG(inv.inv_quantity_on_hand) AS inventory_qty FROM inventory inv JOIN store s ON inv.inv_store_sk=s.s_store_sk JOIN date_dim d ON inv.inv_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
-        "timestamp": "2026-10-27T19:33:13.896993+00:00"
+        "timestamp": "2026-10-27T19:44:01.571007+00:00"
       }
     }
   ],
@@ -808,7 +808,7 @@
         ],
         "source": "duckdb",
         "sql": "WITH monthly AS (SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN store s ON ss.ss_store_sk=s.s_store_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3) SELECT store_id, year, month, revenue, LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month) AS prior_revenue, ROUND(100.0*(revenue-LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month))/NULLIF(LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month),0),2) AS pct_change FROM monthly ORDER BY store_id,year,month",
-        "timestamp": "2026-10-27T19:33:13.843882+00:00"
+        "timestamp": "2026-10-27T19:44:01.515431+00:00"
       },
       {
         "evidence_id": "afbff3eda7c1e3356962",
@@ -873,7 +873,7 @@
         ],
         "source": "duckdb",
         "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(sr.sr_return_amt) AS return_amount FROM store_returns sr JOIN item i ON sr.sr_item_sk=i.i_item_sk JOIN date_dim d ON sr.sr_returned_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
-        "timestamp": "2026-10-27T19:33:13.861078+00:00"
+        "timestamp": "2026-10-27T19:44:01.540194+00:00"
       },
       {
         "evidence_id": "c95ea479ba810c05b664",
@@ -938,7 +938,7 @@
         ],
         "source": "duckdb",
         "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN item i ON ss.ss_item_sk=i.i_item_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
-        "timestamp": "2026-10-27T19:33:13.878289+00:00"
+        "timestamp": "2026-10-27T19:44:01.555678+00:00"
       },
       {
         "evidence_id": "3ee35659998850003a92",
@@ -1003,7 +1003,7 @@
         ],
         "source": "duckdb",
         "sql": "SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, AVG(inv.inv_quantity_on_hand) AS inventory_qty FROM inventory inv JOIN store s ON inv.inv_store_sk=s.s_store_sk JOIN date_dim d ON inv.inv_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
-        "timestamp": "2026-10-27T19:33:13.896993+00:00"
+        "timestamp": "2026-10-27T19:44:01.571007+00:00"
       }
     ],
     "provenance": [

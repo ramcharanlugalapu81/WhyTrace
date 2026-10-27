@@ -36,7 +36,8 @@ html, body, [class*="css"] { font-family:'Manrope',sans-serif; color:var(--ink);
 [data-testid="stSidebar"] [data-testid="stMetricValue"] { color:var(--vanilla); }
 section.main > div { max-width:1320px; padding-top:2.1rem; }
 .brandmark { font-size:.73rem; font-weight:800; letter-spacing:.2em; text-transform:uppercase; color:#438b9b; margin-bottom:1rem; }
-.hero { background:var(--vanilla); border:1px solid #eadb9f; border-radius:24px; padding:2.1rem 2.4rem; margin:0 0 1.5rem 0; box-shadow:0 12px 32px rgba(89,91,52,.06); }
+.hero { position:relative; overflow:hidden; background:var(--vanilla); border:1px solid #eadb9f; border-radius:24px; padding:2.1rem 2.4rem; margin:0 0 1.5rem 0; box-shadow:0 12px 32px rgba(89,91,52,.06); }
+.hero::after { content:''; position:absolute; right:7%; top:12%; width:150px; height:150px; border:1px solid rgba(76,157,176,.25); border-radius:50%; box-shadow:0 0 0 18px rgba(76,157,176,.05),0 0 0 38px rgba(76,157,176,.035); animation:orbitPulse 5s ease-in-out infinite; }
 .hero h1 { font-family:'DM Serif Display',Georgia,serif; font-size:clamp(2.6rem,5vw,4.3rem); line-height:.99; letter-spacing:-.035em; color:#173d45; margin:0 0 .65rem 0; }
 .hero h1 em { color:#4C9DB0; font-style:italic; }
 .hero p { max-width:680px; font-size:1rem; line-height:1.65; color:#526b6d; margin:0; }
@@ -45,7 +46,7 @@ section.main > div { max-width:1320px; padding-top:2.1rem; }
 .section-title { font-family:'DM Serif Display',Georgia,serif; font-size:1.8rem; color:var(--deep); margin:.2rem 0 .3rem 0; }
 .subtle { color:var(--muted); font-size:.9rem; }
 .stButton > button { border-radius:12px; border:1px solid #c6dce0; background:#f4fbfb; color:#285d67; font-weight:700; min-height:2.8rem; transition:all .18s ease; }
-.stButton > button:hover { border-color:var(--moonstone); color:#173d45; background:#e7f4f5; transform:translateY(-1px); }
+.stButton > button:hover { border-color:var(--moonstone); color:#173d45; background:#e7f4f5; transform:translateY(-2px); box-shadow:0 9px 22px rgba(76,157,176,.16); }
 .stButton > button[kind="primary"] { background:#4C9DB0; color:white; border-color:#4C9DB0; box-shadow:0 8px 18px rgba(76,157,176,.18); }
 .stButton > button[kind="primary"]:hover { background:#347f90; color:white; }
 .stTextInput input { border-radius:12px; background:#fffefa; border:1px solid #d9ddcb; min-height:3rem; }
@@ -56,6 +57,12 @@ section.main > div { max-width:1320px; padding-top:2.1rem; }
 .status { display:inline-block; padding:.33rem .65rem; border-radius:999px; font-size:.72rem; letter-spacing:.04em; text-transform:uppercase; font-weight:800; background:#e3f1e8; color:#326c51; }
 .status.ai { background:#dceff2; color:#246676; }
 .status.offline { background:#fff0cf; color:#8b6422; }
+.status::before { content:''; display:inline-block; width:7px; height:7px; margin-right:.42rem; border-radius:50%; background:currentColor; vertical-align:1px; }
+.status.ai::before { animation:statusPulse 1.5s ease-in-out infinite; }
+.process-rail { display:flex; align-items:center; justify-content:space-between; gap:.7rem; padding:.9rem 1.2rem; margin:.9rem 0 1.15rem; background:#fffdf5; border:1px solid var(--line); border-radius:16px; color:#386d77; font-size:.78rem; font-weight:800; letter-spacing:.035em; }
+.process-step { animation:revealUp .5s ease-out both; }
+.process-step:nth-child(3) { animation-delay:.12s; }.process-step:nth-child(5) { animation-delay:.24s; }.process-step:nth-child(7) { animation-delay:.36s; }
+.process-arrow { color:#9abcc0; animation:arrowGlow 1.8s ease-in-out infinite; }
 .claim { font-size:1.08rem; line-height:1.65; color:#28484c; }
 .stSuccess, .stAlert { border-radius:12px; }
 hr { border-color:#e8dfc3; }
@@ -66,6 +73,19 @@ footer { visibility:hidden; }
 [data-testid="stVerticalBlockBorderWrapper"], [data-testid="stExpander"] { animation:revealUp .42s ease-out both; transition:box-shadow .2s ease,border-color .2s ease,transform .2s ease; }
 [data-testid="stVerticalBlockBorderWrapper"]:hover { border-color:#b9d7dc; box-shadow:0 10px 24px rgba(23,61,69,.07); }
 .stTextInput input:focus { border-color:var(--moonstone); box-shadow:0 0 0 3px rgba(76,157,176,.15); }
+.stApp { animation:pageIn .55s ease-out both; }
+@keyframes pageIn { from { opacity:.35; } to { opacity:1; } }
+@keyframes softGlow { 0%,100% { box-shadow:0 0 0 rgba(76,157,176,0); } 50% { box-shadow:0 0 24px rgba(76,157,176,.18); } }
+[data-testid="stStatusWidget"] { border:1px solid #b9d7dc; border-radius:16px; background:#f3fbfb; animation:softGlow 2.4s ease-in-out infinite; }
+[data-testid="stStatusWidget"] svg { color:#347f90; }
+[data-testid="stProgressBar"] > div > div > div > div { background:linear-gradient(90deg,#4C9DB0,#80c7ca,#4C9DB0); background-size:200% 100%; animation:shimmer 1.5s linear infinite; }
+@keyframes shimmer { to { background-position:-200% 0; } }
+@keyframes orbitPulse { 0%,100% { transform:scale(.96) rotate(0); opacity:.68; } 50% { transform:scale(1.04) rotate(12deg); opacity:1; } }
+@keyframes statusPulse { 0%,100% { opacity:.45; box-shadow:0 0 0 0 rgba(76,157,176,.28); } 50% { opacity:1; box-shadow:0 0 0 5px rgba(76,157,176,.12); } }
+@keyframes arrowGlow { 0%,100% { opacity:.45; } 50% { opacity:1; } }
+[data-testid="stVerticalBlockBorderWrapper"]:nth-of-type(2) { animation-delay:.06s; }
+[data-testid="stVerticalBlockBorderWrapper"]:nth-of-type(3) { animation-delay:.12s; }
+.stCaption { color:#61757a; }
 @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; } }
 </style>
 """, unsafe_allow_html=True)
@@ -88,31 +108,39 @@ with st.sidebar:
         st.info("For the full live multi-agent team, add Meterless `METERLESS_RUNTIME_TOKEN`, `METERLESS_BASE_URL`, `FAST_MODEL`, `DEEP_MODEL` and NVIDIA `NVIDIA_API_KEY` in Streamlit Secrets. Keep `SAMPLE_MODE = \"true\"` to use DuckDB sample data.")
         st.markdown("[Get a Nemotron API key ↗](https://build.nvidia.com/nvidia/nemotron-3_5-bolt-e4b)")
     st.caption("Model calls and query steps are logged under `logs/`.")
+    with st.expander("2-minute screen-record flow"):
+        st.markdown("**0:00** Introduce the revenue question.  \n**0:15** Click *Run the guided demo* and show the planner/query/reviewer status.  \n**0:55** Read the ranked, verified result.  \n**1:20** Expand the SQL evidence and show *Why do you believe this?*  \n**1:45** Close on the four-agent roles and the returns decoy.")
 
 st.markdown("<div class='brandmark'>The agent that can explain why · Open Agent Hackathon</div><div class='hero'><div class='eyebrow'>Retail revenue intelligence</div><h1>Follow the change.<br><em>Find the why.</em></h1><p>Ask a retail revenue question. WhyTrace coordinates specialized agents, runs the queries, challenges the evidence, and verifies every number before it reaches the report.</p></div>", unsafe_allow_html=True)
 
-st.markdown("<div class='section-title'>Start an investigation</div><div class='subtle'>Ask naturally about store revenue, product categories, returns, inventory, or monthly changes in the connected retail data.</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>Start an investigation</div><div class='subtle'>Ask naturally about store revenue, product categories, returns, inventory, or monthly changes in the connected retail data. The examples are starting points; type your own question below.</div>", unsafe_allow_html=True)
+st.markdown("<div class='process-rail'><span class='process-step'>01 &nbsp; PLAN</span><span class='process-arrow'>›</span><span class='process-step'>02 &nbsp; QUERY</span><span class='process-arrow'>›</span><span class='process-step'>03 &nbsp; CHALLENGE</span><span class='process-arrow'>›</span><span class='process-step'>04 &nbsp; VERIFY</span></div>", unsafe_allow_html=True)
+guided_demo = st.button("▶  Run the 2-minute guided demo", key="guided-demo", width="stretch")
+if guided_demo:
+    st.session_state["question_input"] = "Why did S3 revenue drop in March 2026?"
+    st.session_state["auto_submit_demo"] = True
 examples = ["Why did S3 revenue drop in March 2026?", "What drove the March revenue change?", "Did returns explain the March decline?"]
 cols = st.columns(3)
 for idx, (col, example) in enumerate(zip(cols, examples)):
     if col.button(example, key=f"example-{idx}", width="stretch"):
         st.session_state["question_input"] = example
 with st.form("investigation", border=False):
-    question = st.text_input("Your question", key="question_input", placeholder="e.g. Why did revenue fall at S3 in March 2026?")
+    question = st.text_input("Your question", key="question_input", placeholder="Ask about any store, item, category, returns, inventory, or revenue movement…")
     submitted = st.form_submit_button("Investigate with WhyTrace  →", type="primary", width="stretch")
-if submitted and question.strip():
+if (submitted or st.session_state.get("auto_submit_demo")) and question.strip():
     try:
-        with st.status("WhyTrace is investigating your question…", expanded=True) as progress:
+        with st.status("Agent team is thinking through your question...", expanded=True) as progress:
             st.session_state["report"] = run_agent(question.strip(), on_step=progress.write)
-            progress.update(label="Investigation complete · evidence verified", state="complete", expanded=False)
+            progress.update(label="Investigation complete · evidence verified", state="complete", expanded=True)
             st.session_state.pop("provenance", None)
+            st.session_state.pop("auto_submit_demo", None)
     except Exception as exc:
         st.error(f"The investigation could not complete: {exc}")
 
 report = st.session_state.get("report")
 if report:
     st.divider()
-    ai_mode = report["agent_mode"] == "Meterless Nightshift"
+    ai_mode = not report["agent_mode"].lower().startswith("offline") and "fallback" not in report["agent_mode"].lower()
     st.markdown(f"<span class='status {'ai' if ai_mode else 'offline'}'>{'Nightshift AI analysis' if ai_mode else 'Deterministic evidence analysis'}</span> &nbsp; <span class='subtle'>Question · {report['question']}</span>", unsafe_allow_html=True)
     st.markdown("<div class='section-title' style='margin-top:.85rem'>Investigation result</div>", unsafe_allow_html=True)
     if report.get("explanation"):

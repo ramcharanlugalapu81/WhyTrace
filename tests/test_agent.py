@@ -82,3 +82,15 @@ def test_supported_inventory_question_uses_inventory_evidence(tmp_path, monkeypa
     lead = report["ranked_drivers"][0]
     assert "inventory" in lead["title"].lower()
     assert lead["verified"] is True
+
+
+def test_supported_item_question_expands_plan_and_uses_item_sales(tmp_path, monkeypatch):
+    monkeypatch.setenv("SAMPLE_MODE", "true")
+    monkeypatch.setenv("WHYTRACE_LOG_DIR", str(tmp_path))
+    report = run_agent("Which item was the best seller in March 2026?",
+                       store=WorldStoreService(tmp_path / "item.jsonl"),
+                       generator=offline, trace_path=tmp_path / "item-trace.jsonl")
+    lead = report["ranked_drivers"][0]
+    assert "item revenue" in lead["claim"]
+    assert lead["verified"] is True
+    assert any("item_id" in step["rows"][0] for step in report["hypotheses"])

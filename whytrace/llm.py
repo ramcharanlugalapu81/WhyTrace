@@ -47,6 +47,8 @@ def _offline(role: str, prompt: str) -> tuple[str, str]:
     target = target_match.group(1).lower() if target_match else p
     if "return" in target or "refund" in target:
         sql = "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(sr.sr_return_amt) AS return_amount FROM store_returns sr JOIN item i ON sr.sr_item_sk=i.i_item_sk JOIN date_dim d ON sr.sr_returned_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3"
+    elif re.search(r"\b(item|sku)\b|best.sell|top.sell", target):
+        sql = "SELECT i.i_item_id AS item_id, i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN item i ON ss.ss_item_sk=i.i_item_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3,4 ORDER BY 1,3,4"
     elif "inventory" in target or "stock" in target:
         sql = "SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, AVG(inv.inv_quantity_on_hand) AS inventory_qty FROM inventory inv JOIN store s ON inv.inv_store_sk=s.s_store_sk JOIN date_dim d ON inv.inv_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3"
     elif "category" in target or "mix" in target or "product" in target:
