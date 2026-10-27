@@ -115,10 +115,9 @@ st.markdown("<div class='brandmark'>The agent that can explain why · Open Agent
 
 st.markdown("<div class='section-title'>Start an investigation</div><div class='subtle'>Ask naturally about store revenue, product categories, returns, inventory, or monthly changes in the connected retail data. The examples are starting points; type your own question below.</div>", unsafe_allow_html=True)
 st.markdown("<div class='process-rail'><span class='process-step'>01 &nbsp; PLAN</span><span class='process-arrow'>›</span><span class='process-step'>02 &nbsp; QUERY</span><span class='process-arrow'>›</span><span class='process-step'>03 &nbsp; CHALLENGE</span><span class='process-arrow'>›</span><span class='process-step'>04 &nbsp; VERIFY</span></div>", unsafe_allow_html=True)
-guided_demo = st.button("▶  Run the 2-minute guided demo", key="guided-demo", width="stretch")
+guided_demo = st.button("▶  Load the 2-minute demo question", key="guided-demo", width="stretch")
 if guided_demo:
     st.session_state["question_input"] = "Why did S3 revenue drop in March 2026?"
-    st.session_state["auto_submit_demo"] = True
 examples = ["Why did S3 revenue drop in March 2026?", "What drove the March revenue change?", "Did returns explain the March decline?"]
 cols = st.columns(3)
 for idx, (col, example) in enumerate(zip(cols, examples)):
@@ -127,13 +126,12 @@ for idx, (col, example) in enumerate(zip(cols, examples)):
 with st.form("investigation", border=False):
     question = st.text_input("Your question", key="question_input", placeholder="Ask about any store, item, category, returns, inventory, or revenue movement…")
     submitted = st.form_submit_button("Investigate with WhyTrace  →", type="primary", width="stretch")
-if (submitted or st.session_state.get("auto_submit_demo")) and question.strip():
+if submitted and question.strip():
     try:
         with st.status("Agent team is thinking through your question...", expanded=True) as progress:
             st.session_state["report"] = run_agent(question.strip(), on_step=progress.write)
             progress.update(label="Investigation complete · evidence verified", state="complete", expanded=True)
             st.session_state.pop("provenance", None)
-            st.session_state.pop("auto_submit_demo", None)
     except Exception as exc:
         st.error(f"The investigation could not complete: {exc}")
 

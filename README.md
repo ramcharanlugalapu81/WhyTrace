@@ -33,7 +33,7 @@ Run the app with `streamlit run app.py`. By default, `SAMPLE_MODE=true` uses the
 
 This is a retail analytics agent, not an unrestricted general-purpose chatbot. Its supported evidence is store revenue, item and category sales, returns, and average inventory from the six documented tables; month-over-month analysis requires both months to exist in the source. Ask questions in natural language within that scope, and it routes the lead analysis to the matching evidence type. The three prompt buttons are examples only; the question field is open-ended.
 
-For a two-minute screen recording, press **Run the 2-minute guided demo**. The investigation stays expanded and shows planner, SQL, query execution, Nemotron review, and verification stages as they happen. Then show the ranked answer, open a SQL evidence card, and finish on the provenance chain. The sidebar includes a timed recording outline.
+For a two-minute screen recording, press **Load the 2-minute demo question**, then press **Investigate with WhyTrace** to begin. Choosing an example never starts the agent by itself. The investigation stays expanded and shows planner, SQL, query execution, Nemotron review, and verification stages as they happen. Then show the ranked answer, open a SQL evidence card, and finish on the provenance chain. The sidebar includes a timed recording outline.
 
 ## Deploy a shareable demo
 
