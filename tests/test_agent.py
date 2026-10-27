@@ -6,6 +6,9 @@ from whytrace.world_model.store import WorldStoreService
 
 def offline(role, prompt):
     if role == "deep":
+        if prompt.startswith("EXPLANATION:"):
+            from whytrace.llm import _offline
+            return _offline(role, prompt)
         return json.dumps({"hypotheses": [
             {"name": "Store revenue changed", "question": "Compare monthly net sales by store"},
             {"name": "Returns spike", "question": "Compare monthly return amount by item category"},
@@ -25,6 +28,9 @@ def test_planted_cause_ranks_first_and_decoy_ruled_out(tmp_path, monkeypatch):
     assert report["ranked_drivers"][0]["verified"] is True
     assert any("returns" in x["title"].lower() for x in report["ruled_out"])
     assert any("Electronics" in x["claim"] for x in report["ruled_out"])
+    assert report["agent_mode"] == "Offline evidence agent"
+    assert report["skeptic_review"]["model"] == "offline-skeptic"
+    assert report["context"]["provenance"][0]["source"] == "duckdb"
 
 
 def test_verifier_flags_tampered_number(tmp_path):

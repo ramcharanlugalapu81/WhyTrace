@@ -9,6 +9,7 @@ load_dotenv()
 
 # Community Cloud stores deployment values in st.secrets rather than process env.
 for _key in ("SAMPLE_MODE", "METERLESS_BASE_URL", "METERLESS_RUNTIME_TOKEN", "FAST_MODEL", "DEEP_MODEL",
+             "NVIDIA_API_KEY", "NVIDIA_BASE_URL", "NEMOTRON_MODEL", "NEMOTRON_FAST_MODEL", "NEMOTRON_REVIEW_MODEL",
              "ZETARIS_JDBC_URL", "ZETARIS_USERNAME", "ZETARIS_PASSWORD", "ZETARIS_JDBC_JAR"):
     if not os.getenv(_key):
         try:
@@ -66,18 +67,22 @@ with st.sidebar:
     st.markdown("<div style='font-family:DM Serif Display,Georgia,serif;font-size:2rem;line-height:1;color:#fffdf5'>WhyTrace</div><div style='opacity:.82;margin-top:.4rem;font-size:.82rem'>Evidence-led retail intelligence</div>", unsafe_allow_html=True)
     st.divider()
     has_token = bool(_setting("METERLESS_RUNTIME_TOKEN").strip())
-    live_ai = has_token
-    st.markdown(f"<span class='status {'ai' if live_ai else 'offline'}'>{'Nightshift configured' if live_ai else 'Offline evidence agent'}</span>", unsafe_allow_html=True)
+    has_nvidia = bool(_setting("NVIDIA_API_KEY").strip())
+    live_ai = has_token or has_nvidia
+    provider_label = ("Nightshift + Nemotron configured" if has_token and has_nvidia else
+                      "Nightshift configured" if has_token else "Nemotron configured" if has_nvidia else "Offline evidence agent")
+    st.markdown(f"<span class='status {'ai' if live_ai else 'offline'}'>{provider_label}</span>", unsafe_allow_html=True)
     sample_mode = _setting("SAMPLE_MODE", "true").strip().lower() in {"1", "true", "yes", "on"}
     st.markdown(f"<p style='font-size:.82rem;margin-top:.7rem;opacity:.88'>Data source · {'Sample DuckDB' if sample_mode else 'Zetaris JDBC'}</p>", unsafe_allow_html=True)
     st.divider()
-    st.markdown("**How this agent works**")
-    st.markdown("1. Plans investigations\n2. Writes and runs read-only SQL\n3. Saves query evidence\n4. Rechecks every cited number")
-    if not has_token:
-        st.info("To turn on live AI, add `METERLESS_RUNTIME_TOKEN`, `METERLESS_BASE_URL`, `FAST_MODEL`, and `DEEP_MODEL` in your app's Streamlit Secrets. Sample mode can stay on while the model investigates DuckDB.")
+    st.markdown("**Agent team**")
+    st.markdown(f"Planner + SQL investigator · {'Meterless Nightshift' if has_token else 'Nemotron / offline'}  \nIndependent skeptic · {'NVIDIA Nemotron' if has_nvidia else 'offline reviewer'}  \nExplainer · {'Meterless Nightshift' if has_token else 'Nemotron / offline'}")
+    if not has_token or not has_nvidia:
+        st.info("For the full live multi-agent team, add Meterless `METERLESS_RUNTIME_TOKEN`, `METERLESS_BASE_URL`, `FAST_MODEL`, `DEEP_MODEL` and NVIDIA `NVIDIA_API_KEY` in Streamlit Secrets. Keep `SAMPLE_MODE = \"true\"` to use DuckDB sample data.")
+        st.markdown("[Get a Nemotron API key ↗](https://build.nvidia.com/nvidia/nemotron-3_5-bolt-e4b)")
     st.caption("Model calls and query steps are logged under `logs/`.")
 
-st.markdown("<div class='brandmark'>Retail intelligence · powered by evidence</div><div class='hero'><div class='eyebrow'>A better answer to “what changed?”</div><h1>Follow the change.<br><em>Find the why.</em></h1><p>Ask a retail revenue question. WhyTrace plans the investigation, runs the queries, and verifies every number before it reaches the report.</p></div>", unsafe_allow_html=True)
+st.markdown("<div class='brandmark'>The agent that can explain why · Open Agent Hackathon</div><div class='hero'><div class='eyebrow'>Retail revenue intelligence</div><h1>Follow the change.<br><em>Find the why.</em></h1><p>Ask a retail revenue question. WhyTrace coordinates specialized agents, runs the queries, challenges the evidence, and verifies every number before it reaches the report.</p></div>", unsafe_allow_html=True)
 
 st.markdown("<div class='section-title'>Start an investigation</div><div class='subtle'>Pick a guided question or ask your own.</div>", unsafe_allow_html=True)
 examples = ["Why did S3 revenue drop in March 2026?", "What drove the March revenue change?", "Did returns explain the March decline?"]
@@ -105,6 +110,16 @@ if report:
     st.markdown("<div class='section-title' style='margin-top:.85rem'>Investigation result</div>", unsafe_allow_html=True)
     if report.get("explanation"):
         st.markdown(f"<div class='panel claim'>{report['explanation']}<div class='subtle' style='margin-top:.7rem;font-size:.78rem'>Explanation model · {report['explanation_model']} · Sources are linked below</div></div>", unsafe_allow_html=True)
+    if report.get("skeptic_review"):
+        review = report["skeptic_review"]
+        with st.container(border=True):
+            st.markdown("**Independent skeptic review**")
+            st.write(review["review"])
+            st.caption(f"Reviewer · {review['model']} · {len(review['evidence_ids'])} evidence sources in scope")
+            if review.get("contradictions"):
+                st.warning(f"Skeptic flagged {len(review['contradictions'])} possible contradiction(s). Inspect cited rows before relying on the conclusion.")
+            else:
+                st.success("No unsupported number or conflicting row found in the independent review.")
     if report["ranked_drivers"]:
         main = report["ranked_drivers"][0]
         metrics = st.columns(3)
@@ -161,3 +176,5 @@ if report:
         for step in report["hypotheses"]:
             st.markdown(f"**{step['name']}** · {step['model']} · {len(step['rows'])} rows")
             st.code(step["sql"], language="sql")
+        st.markdown(f"**Independent skeptic** · {report['skeptic_review']['model']}")
+        st.markdown(f"**Evidence explainer** · {report['explanation_model']}")

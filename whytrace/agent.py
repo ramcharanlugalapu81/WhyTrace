@@ -222,19 +222,41 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
                       "driver": drivers[0]["title"] if drivers else "no month-over-month change could be verified",
                       "evidence_ids": evidence_ids,
                       "returns_check": ruled[0]["title"] if ruled and return_result else "returns were not conclusive"}
+    announce("Skeptic agent is independently reviewing the evidence")
+    skeptic_prompt = ("You are the independent skeptic in a multi-agent retail analytics team. "
+                      "Check whether the proposed result is actually supported by the supplied query rows. "
+                      "Do not invent facts, numbers, causes, or new claims. Return only JSON with keys status, review, contradictions. "
+                      "Keep review to one concise sentence. Any contradiction must quote an evidence_id and a row/field.\n"
+                      "INVESTIGATION: " + json.dumps({"question": question, "proposed_result": answer_context,
+                                                       "queries": [{"name": r["name"], "evidence_id": r["evidence"]["evidence_id"],
+                                                       "rows": r["rows"][:20]} for r in results]}, default=str))
+    skeptic_text, skeptic_model = generator("skeptic", skeptic_prompt)
+    skeptic_payload = _json_object(skeptic_text)
+    skeptic_review = {"status": skeptic_payload.get("status", "reviewed"),
+                      "review": skeptic_payload.get("review", skeptic_text),
+                      "contradictions": skeptic_payload.get("contradictions", []),
+                      "model": skeptic_model, "evidence_ids": evidence_ids}
+    _append_trace(trace_path, "skeptic_review", skeptic_model)
     explain_prompt = "EXPLANATION:\n" + json.dumps(answer_context)
     explanation, explanation_model = generator("deep", explain_prompt)
     _append_trace(trace_path, "explanation", explanation_model)
     announce("Re-running cited SQL and checking claim values")
     report = {"question": question, "ranked_drivers": drivers, "ruled_out": ruled,
               "explanation": explanation, "explanation_model": explanation_model,
+              "skeptic_review": skeptic_review,
               "explanation_evidence_ids": evidence_ids,
               "recommended_actions": ["Inspect the affected store's staffing, stock availability, and promotions for the focus month.",
                                       "Review the highest-changing category and returns evidence before taking action."],
               "evidence_ids": evidence_ids, "model_plan": plan_model, "hypotheses": results,
-              "agent_mode": "Meterless Nightshift" if _setting("METERLESS_RUNTIME_TOKEN").strip() and
-              not any(str(model).startswith("offline") for model in [plan_model, explanation_model] + [r["model"] for r in results])
-              else "Offline evidence agent"}
+              "agent_roles": {"planner": plan_model, "sql_investigator": list(dict.fromkeys(r["model"] for r in results)),
+                              "skeptic": skeptic_model, "explainer": explanation_model}}
+    used_models = [plan_model, skeptic_model, explanation_model] + [r["model"] for r in results]
+    used_live = [model for model in used_models if str(model).lower().startswith(("meterless", "nvidia"))]
+    if used_live and not any("fallback" in str(model).lower() or str(model).lower().startswith("offline") for model in used_models):
+        providers = {"nvidia" if str(model).lower().startswith("nvidia") else "meterless" for model in used_live}
+        report["agent_mode"] = "Multi-agent · Meterless + NVIDIA Nemotron" if len(providers) == 2 else "NVIDIA Nemotron agents" if "nvidia" in providers else "Meterless Nightshift agents"
+    else:
+        report["agent_mode"] = "Multi-agent · live model with offline fallback" if used_live else "Offline evidence agent"
     verify_report(report, store, query_fn=query_fn)
     announce("Evidence verification complete")
     report["context"] = ContextBuilderService(store).build_context(evidence_ids)

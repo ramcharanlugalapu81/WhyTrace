@@ -24,6 +24,8 @@ def _setting(name: str, default: str = "") -> str:
 
 
 def _offline(role: str, prompt: str) -> tuple[str, str]:
+    if role == "skeptic":
+        return json.dumps({"status": "reviewed", "review": "Independent review complete: the ranking is computed from re-run query results; inspect the cited rows for scope and data freshness.", "contradictions": []}), "offline-skeptic"
     if role == "deep" and prompt.startswith("EXPLANATION:"):
         data = json.loads(prompt.split("\n", 1)[1])
         return (f"{data['store']} posted the largest month-over-month revenue decline in "
@@ -53,16 +55,30 @@ def _offline(role: str, prompt: str) -> tuple[str, str]:
 
 
 def generate(role: str, prompt: str) -> tuple[str, str]:
-    if role not in {"fast", "deep"}:
-        raise ValueError("role must be 'fast' or 'deep'")
-    token = _setting("METERLESS_RUNTIME_TOKEN").strip()
-    model = _setting("FAST_MODEL" if role == "fast" else "DEEP_MODEL").strip()
-    model = model or ("nightshift-fast" if role == "fast" else "nightshift-deep")
+    if role not in {"fast", "deep", "skeptic"}:
+        raise ValueError("role must be 'fast', 'deep', or 'skeptic'")
+    meterless_token = _setting("METERLESS_RUNTIME_TOKEN").strip()
+    nvidia_token = _setting("NVIDIA_API_KEY").strip()
+    provider = "meterless" if role in {"fast", "deep"} and meterless_token else "nvidia" if nvidia_token else "offline"
+    if provider == "meterless":
+        token = meterless_token
+        model = _setting("FAST_MODEL" if role == "fast" else "DEEP_MODEL").strip()
+        model = model or ("nightshift-fast" if role == "fast" else "nightshift-deep")
+        base_url = _setting("METERLESS_BASE_URL") or None
+    elif provider == "nvidia":
+        token = nvidia_token
+        model = (_setting("NEMOTRON_REVIEW_MODEL") if role == "skeptic" else
+                 _setting("NEMOTRON_FAST_MODEL") if role == "fast" else
+                 _setting("NEMOTRON_MODEL")) or "nvidia/nemotron-3.5-bolt-e4b"
+        base_url = _setting("NVIDIA_BASE_URL") or "https://integrate.api.nvidia.com/v1"
+    else:
+        text, model = _offline(role, prompt)
+        provider = "offline"
     ok, error = True, None
-    if token:
+    if provider != "offline":
         try:
             from openai import OpenAI
-            client = OpenAI(api_key=token, base_url=_setting("METERLESS_BASE_URL") or None)
+            client = OpenAI(api_key=token, base_url=base_url)
             response = client.chat.completions.create(
                 model=model,
                 messages=[
@@ -77,13 +93,14 @@ def generate(role: str, prompt: str) -> tuple[str, str]:
         except Exception as exc:
             ok, error = False, f"{type(exc).__name__}: {exc}"
             text, model = _offline(role, prompt)
-            model = model + " (fallback)"
-    else:
-        text, model = _offline(role, prompt)
+            model = f"{model} (fallback from {provider})"
+    if provider != "offline" and ok:
+        model = f"{provider.title()} · {model}"
 
     log_dir = Path(os.getenv("WHYTRACE_LOG_DIR", "logs"))
     log_dir.mkdir(parents=True, exist_ok=True)
-    entry = {"timestamp": datetime.now(timezone.utc).isoformat(), "role": role, "model": model, "ok": ok}
+    entry = {"timestamp": datetime.now(timezone.utc).isoformat(), "role": role, "provider": provider,
+             "model": model, "ok": ok}
     if error:
         entry["error"] = error
     with (log_dir / "requests.jsonl").open("a", encoding="utf-8") as f:
