@@ -49,6 +49,9 @@ section.main > div { max-width:1320px; padding-top:2.1rem; }
 .stButton > button:hover { border-color:var(--moonstone); color:#173d45; background:#e7f4f5; transform:translateY(-2px); box-shadow:0 9px 22px rgba(76,157,176,.16); }
 .stButton > button[kind="primary"] { background:#4C9DB0; color:white; border-color:#4C9DB0; box-shadow:0 8px 18px rgba(76,157,176,.18); }
 .stButton > button[kind="primary"]:hover { background:#347f90; color:white; }
+[data-testid="stSidebar"] [data-testid="stButton"] > button { background:#fff9e8 !important; color:#173d45 !important; border:1px solid rgba(23,61,69,.2) !important; text-align:left; justify-content:flex-start; padding-left:1rem; }
+[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"] { background:#173d45 !important; color:#ffebaf !important; border-color:#173d45 !important; }
+[data-testid="stSidebar"] [data-testid="stButton"] > button:hover { background:#e5f3f1 !important; color:#173d45 !important; transform:translateX(2px); }
 .stTextInput input { border-radius:12px; background:#fffefa; border:1px solid #d9ddcb; min-height:3rem; }
 [data-testid="stMetric"] { background:#fffdf5; border:1px solid #e8dfc3; border-radius:15px; padding:1rem 1.1rem; }
 [data-testid="stMetricLabel"] { color:#65777a; font-weight:700; }
@@ -110,7 +113,7 @@ with st.sidebar:
     st.divider()
     st.markdown("**Workspace**")
     for _page in ("Overview", "Investigate", "Visualizations"):
-        if st.button((">  " if st.session_state.get("page", "Overview") == _page else "   ") + _page, key=f"nav-{_page}", width="stretch"):
+        if st.button(_page, key=f"nav-{_page}", type="primary" if st.session_state.get("page", "Overview") == _page else "secondary", width="stretch"):
             st.session_state["page"] = _page
             st.rerun()
     st.divider()
