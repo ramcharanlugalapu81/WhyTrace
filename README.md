@@ -31,6 +31,8 @@ Copy-Item .env.example .env
 
 Run the app with `streamlit run app.py`. By default, `SAMPLE_MODE=true` uses the deterministic local DuckDB dataset. If `METERLESS_RUNTIME_TOKEN` is configured, the agent uses Nightshift for hypothesis planning, SQL generation, and its evidence-grounded explanation while keeping data local. Without a token, it clearly labels and uses the deterministic offline evidence agent. You can try the three sample questions in the app.
 
+This is a retail analytics agent, not an unrestricted general-purpose chatbot. Its supported evidence is store revenue, category sales, returns, and average inventory from the six documented tables; month-over-month analysis requires both months to exist in the source. Ask questions in natural language within that scope, and it routes the lead analysis to the matching evidence type.
+
 ## Deploy a shareable demo
 
 The app is ready for Streamlit Community Cloud in sample mode. Sign in at [share.streamlit.io](https://share.streamlit.io/) with the GitHub account that can access this repository, choose **Create app**, then select repository `ramcharanlugalapu81/WhyTrace`, branch `main`, and entrypoint `app.py`. Choose Python 3.11 in advanced settings if offered, then click **Deploy**. `SAMPLE_MODE` defaults to true, so the hosted app uses DuckDB sample data. Without a token it runs the deterministic evidence agent and labels that mode clearly. To enable live Nightshift planning, SQL generation, and explanation while keeping sample data, add these values under the app's **Settings > Secrets**:

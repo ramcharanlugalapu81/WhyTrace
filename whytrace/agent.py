@@ -81,17 +81,89 @@ def _find_row(rows: list[dict], **fields):
     return next((i for i, row in enumerate(rows) if all(str(row.get(k)).upper() == str(v).upper() for k, v in fields.items())), None)
 
 
-def _row_for(rows: list[dict], store: str | None, month: int | None, year: int | None):
+def _row_for(rows: list[dict], store: str | None, month: int | None, year: int | None, direction: str = "largest_change"):
     candidates = [(i, r) for i, r in enumerate(rows) if r.get("revenue") is not None and (month is None or int(r["month"]) == month) and (year is None or int(r["year"]) == year)]
     if store:
         candidates = [(i, r) for i, r in candidates if str(r.get("store_id", "")).upper() == store.upper()]
-    return min(candidates, key=lambda pair: _pct(pair[1]) if _pct(pair[1]) is not None else 0) if candidates else (None, None)
+    if direction == "increase":
+        return max(candidates, key=lambda pair: _pct(pair[1]) if _pct(pair[1]) is not None else float("-inf")) if candidates else (None, None)
+    if direction == "decrease":
+        return min(candidates, key=lambda pair: _pct(pair[1]) if _pct(pair[1]) is not None else float("inf")) if candidates else (None, None)
+    return max(candidates, key=lambda pair: abs(_pct(pair[1]) or 0)) if candidates else (None, None)
 
 
 def _previous_index(rows: list[dict], row: dict):
     year, month, store = int(row["year"]), int(row["month"]), row["store_id"]
     py, pm = (year - 1, 12) if month == 1 else (year, month - 1)
     return _find_row(rows, store_id=store, year=py, month=pm)
+
+
+def _question_intent(question: str) -> str:
+    q = question.lower()
+    if any(word in q for word in ("return", "refund")) and not any(word in q for word in ("explain", "account for", "cause", "drive")):
+        return "returns"
+    if any(word in q for word in ("inventory", "stock level", "stockout")) and not any(word in q for word in ("explain", "account for", "cause", "drive")):
+        return "inventory"
+    if any(word in q for word in ("category", "categories", "product mix", "item mix", "which product")):
+        return "category"
+    return "store"
+
+
+def _dimension_driver(question: str, intent: str, results: list[dict]):
+    spec = {"returns": ("return", "category", "return_amount", "return"),
+            "category": ("category", "category", "revenue", "revenue"),
+            "inventory": ("inventory", "store_id", "inventory_qty", "units")}.get(intent)
+    if not spec:
+        return None
+    marker, key, value_col, unit = spec
+    result = next((r for r in results if marker in (r["name"] + r["question"]).lower()
+                   and r["rows"] and value_col in r["rows"][0]), None)
+    if result is None:
+        return None
+    rows = result["rows"]
+    month, year = _month_year(question, rows)
+    if month is None or year is None:
+        return None
+    focus_month, focus_year = month, year
+    prior_month, prior_year = ((month - 1, year) if month > 1 else (12, year - 1))
+    target_match = re.search(r"\b(S\d+|Electronics|Home|Apparel)\b", question, re.I)
+    target = target_match.group(1).lower() if target_match else None
+    pairs = []
+    for idx, row in enumerate(rows):
+        if int(row.get("month", -1)) != focus_month or int(row.get("year", -1)) != focus_year or row.get(value_col) is None:
+            continue
+        label = row.get(key)
+        if target and str(label).lower() != target:
+            continue
+        before = _find_row(rows, **{key: label, "year": prior_year, "month": prior_month})
+        if before is not None and rows[before].get(value_col) is not None:
+            before_value, after_value = float(rows[before][value_col]), float(row[value_col])
+            pairs.append((after_value - before_value, idx, before, label, before_value, after_value))
+    if not pairs:
+        return None
+    q = question.lower()
+    if any(word in q for word in ("grow", "increase", "rise", "higher", "up")):
+        pair = max(pairs)
+    elif any(word in q for word in ("drop", "fall", "decrease", "decline", "lower", "down", "lose")):
+        pair = min(pairs)
+    else:
+        pair = max(pairs, key=lambda p: abs(p[0]))
+    delta, idx, before, label, before_value, after_value = pair
+    subject = f"{label} {intent}"
+    period = f"{focus_year}-{focus_month:02d}"
+    if unit == "return":
+        claim = f"{label} returns moved from ${before_value:,.0f} to ${after_value:,.0f} month over month."
+    elif unit == "revenue":
+        claim = f"{label} category revenue moved from ${before_value:,.0f} to ${after_value:,.0f} month over month."
+    else:
+        claim = f"{label} average inventory moved from {before_value:,.0f} to {after_value:,.0f} units month over month."
+    eid = result["evidence"]["evidence_id"]
+    return {"title": f"{subject.title()} changed in {period}", "claim": claim,
+            "confidence": 0.84, "evidence_ids": [eid],
+            "numeric_claims": [
+                {"label": f"Prior period {unit}", "evidence_id": eid, "row_index": before, "column": value_col, "value": rows[before][value_col]},
+                {"label": f"Focus period {unit}", "evidence_id": eid, "row_index": idx, "column": value_col, "value": rows[idx][value_col]},
+            ], "model": result["model"], "period": period, "subject": subject}
 
 
 def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn=run_query,
@@ -128,7 +200,7 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
                      f"Use only this schema: {SCHEMA}\nHypothesis: {name}\nTest: {prompt}\n"
                      "For store revenue, return aliases store_id, year, month, revenue, prior_revenue, pct_change. "
                      "For returns, return category, year, month, return_amount. For category sales return category, year, month, revenue. "
-                     "For inventory return store_id, year, month, inventory_qty.")
+                     "For inventory return store_id, year, month, inventory_qty. Include the focus month and its immediately preceding month; do not filter away the comparison period.")
         sql_text, model = generator("fast", sql_prompt)
         sql = _sql_text(sql_text)
         try:
@@ -138,7 +210,7 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
             from whytrace.llm import _offline
             sql, model = _offline("fast", "HYPOTHESIS: " + prompt)
             rows = query_fn(sql)
-        if "store" in (name + prompt).lower() and rows and not {"store_id", "year", "month", "revenue", "pct_change"}.issubset(rows[0]):
+        if "store" in name.lower() and "inventory" not in name.lower() and rows and not {"store_id", "year", "month", "revenue", "pct_change"}.issubset(rows[0]):
             from whytrace.llm import _offline
             sql, model = _offline("fast", "monthly net sales by store")
             rows = query_fn(sql)
@@ -148,8 +220,8 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
         results.append({"name": name, "question": prompt, "sql": sql, "model": model,
                         "rows": rows, "evidence": evidence})
 
-    store_result = next((r for r in results if "store" in (r["name"] + r["question"]).lower()), None)
-    if store_result is None or not store_result["rows"] or "store_id" not in store_result["rows"][0]:
+    store_result = next((r for r in results if r["rows"] and {"store_id", "year", "month", "revenue", "pct_change"}.issubset(r["rows"][0])), None)
+    if store_result is None:
         from whytrace.llm import _offline
         sql, model = _offline("fast", "monthly net sales by store")
         rows = query_fn(sql)
@@ -161,11 +233,18 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
 
     store_rows = store_result["rows"]
     month, year = _month_year(question, store_rows)
+    lowered_question = question.lower()
+    if any(word in lowered_question for word in ("grow", "increase", "rise", "higher")):
+        store_direction = "increase"
+    elif any(word in lowered_question for word in ("drop", "fall", "decrease", "decline", "lower")):
+        store_direction = "decrease"
+    else:
+        store_direction = "largest_change"
     requested_store = re.search(r"\bS\d+\b", question, re.I)
     target_store = requested_store.group().upper() if requested_store else None
-    current_idx, current = _row_for(store_rows, target_store, month, year)
+    current_idx, current = _row_for(store_rows, target_store, month, year, store_direction)
     if current is None and target_store:
-        current_idx, current = _row_for(store_rows, None, month, year)
+        current_idx, current = _row_for(store_rows, None, month, year, store_direction)
     prev_idx = _previous_index(store_rows, current) if current else None
     store_eid = store_result["evidence"]["evidence_id"]
     drivers, ruled = [], []
@@ -185,10 +264,14 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
                             {"label": "Focus month revenue", "evidence_id": store_eid, "row_index": current_idx, "column": "revenue", "value": current["revenue"]},
                             {"label": "Month-over-month change", "evidence_id": store_eid, "row_index": current_idx, "column": "pct_change", "value": current["pct_change"]},
                         ], "model": store_result["model"], "period": period, "store_id": store_id})
+    intent = _question_intent(question)
+    if intent != "store":
+        dimensional_driver = _dimension_driver(question, intent, results)
+        drivers = [dimensional_driver] if dimensional_driver else []
     focus_month, focus_year = (int(current["month"]), int(current["year"])) if current else (month, year)
     prior_month, prior_year = ((focus_month - 1, focus_year) if focus_month and focus_month > 1 else (12, focus_year - 1)) if focus_month else (None, None)
     return_result = next((r for r in results if "return" in (r["name"] + r["question"]).lower()), None)
-    if return_result:
+    if return_result and intent == "store":
         rr, eid = return_result["rows"], return_result["evidence"]["evidence_id"]
         pairs = []
         for i, row in enumerate(rr):
@@ -217,7 +300,7 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
                       "numeric_claims": [], "model": result["model"]})
 
     evidence_ids = list(dict.fromkeys(r["evidence"]["evidence_id"] for r in results))
-    answer_context = {"store": drivers[0]["store_id"] if drivers else "store trend",
+    answer_context = {"store": drivers[0].get("subject", drivers[0].get("store_id", "retail metric")) if drivers else "retail trend",
                       "period": drivers[0]["period"] if drivers else "the requested period",
                       "driver": drivers[0]["title"] if drivers else "no month-over-month change could be verified",
                       "evidence_ids": evidence_ids,
@@ -241,12 +324,17 @@ def run_agent(question: str, *, store: WorldStoreService | None = None, query_fn
     explanation, explanation_model = generator("deep", explain_prompt)
     _append_trace(trace_path, "explanation", explanation_model)
     announce("Re-running cited SQL and checking claim values")
+    actions = {
+        "returns": ["Inspect the category's return reasons and product quality signals.", "Compare return rates against unit sales before changing policy."],
+        "category": ["Review promotions, pricing, and availability for the category.", "Compare the category's contribution with the total store trend."],
+        "inventory": ["Check replenishment timing and stockout events for the affected store.", "Compare average on-hand stock with the sales trend before changing orders."],
+        "store": ["Inspect the affected store's staffing, stock availability, and promotions for the focus month.", "Review the returns evidence before taking action."],
+    }[intent]
     report = {"question": question, "ranked_drivers": drivers, "ruled_out": ruled,
               "explanation": explanation, "explanation_model": explanation_model,
               "skeptic_review": skeptic_review,
               "explanation_evidence_ids": evidence_ids,
-              "recommended_actions": ["Inspect the affected store's staffing, stock availability, and promotions for the focus month.",
-                                      "Review the highest-changing category and returns evidence before taking action."],
+              "recommended_actions": actions,
               "evidence_ids": evidence_ids, "model_plan": plan_model, "hypotheses": results,
               "agent_roles": {"planner": plan_model, "sql_investigator": list(dict.fromkeys(r["model"] for r in results)),
                               "skeptic": skeptic_model, "explainer": explanation_model}}

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -28,9 +29,8 @@ def _offline(role: str, prompt: str) -> tuple[str, str]:
         return json.dumps({"status": "reviewed", "review": "Independent review complete: the ranking is computed from re-run query results; inspect the cited rows for scope and data freshness.", "contradictions": []}), "offline-skeptic"
     if role == "deep" and prompt.startswith("EXPLANATION:"):
         data = json.loads(prompt.split("\n", 1)[1])
-        return (f"{data['store']} posted the largest month-over-month revenue decline in "
-                f"{data['period']}. The evidence shows a broad store-level drop; the returns check "
-                "was much smaller and does not account for the missing sales."), "offline-evidence-reasoner"
+        return (f"{data['driver']}. The underlying query rows are linked in the evidence panel, "
+                "and the independent reviewer checked the same evidence before reporting this result."), "offline-evidence-reasoner"
     if role == "deep":
         question = prompt.split("QUESTION:", 1)[-1].lower()
         focus = "store revenue" if "store" in question or "revenue" in question or "sales" in question else "retail performance"
@@ -43,11 +43,13 @@ def _offline(role: str, prompt: str) -> tuple[str, str]:
         return json.dumps(text), "offline-hypothesis-planner"
 
     p = prompt.lower()
-    if "return" in p:
+    target_match = re.search(r"(?:hypothesis|test):\s*([^\n]+)", prompt, re.I)
+    target = target_match.group(1).lower() if target_match else p
+    if "return" in target or "refund" in target:
         sql = "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(sr.sr_return_amt) AS return_amount FROM store_returns sr JOIN item i ON sr.sr_item_sk=i.i_item_sk JOIN date_dim d ON sr.sr_returned_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3"
-    elif "inventory" in p:
-        sql = "SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, SUM(inv.inv_quantity_on_hand) AS inventory_qty FROM inventory inv JOIN store s ON inv.inv_store_sk=s.s_store_sk JOIN date_dim d ON inv.inv_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3"
-    elif "category" in p or "mix" in p:
+    elif "inventory" in target or "stock" in target:
+        sql = "SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, AVG(inv.inv_quantity_on_hand) AS inventory_qty FROM inventory inv JOIN store s ON inv.inv_store_sk=s.s_store_sk JOIN date_dim d ON inv.inv_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3"
+    elif "category" in target or "mix" in target or "product" in target:
         sql = "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN item i ON ss.ss_item_sk=i.i_item_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3"
     else:
         sql = "WITH monthly AS (SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN store s ON ss.ss_store_sk=s.s_store_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3) SELECT store_id, year, month, revenue, LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month) AS prior_revenue, ROUND(100.0*(revenue-LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month))/NULLIF(LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month),0),2) AS pct_change FROM monthly ORDER BY store_id,year,month"

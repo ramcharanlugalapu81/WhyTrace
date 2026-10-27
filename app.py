@@ -60,6 +60,13 @@ section.main > div { max-width:1320px; padding-top:2.1rem; }
 .stSuccess, .stAlert { border-radius:12px; }
 hr { border-color:#e8dfc3; }
 footer { visibility:hidden; }
+@keyframes revealUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+.brandmark { animation:revealUp .42s ease-out both; }
+.hero { animation:revealUp .56s cubic-bezier(.2,.7,.25,1) .04s both; }
+[data-testid="stVerticalBlockBorderWrapper"], [data-testid="stExpander"] { animation:revealUp .42s ease-out both; transition:box-shadow .2s ease,border-color .2s ease,transform .2s ease; }
+[data-testid="stVerticalBlockBorderWrapper"]:hover { border-color:#b9d7dc; box-shadow:0 10px 24px rgba(23,61,69,.07); }
+.stTextInput input:focus { border-color:var(--moonstone); box-shadow:0 0 0 3px rgba(76,157,176,.15); }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; } }
 </style>
 """, unsafe_allow_html=True)
 
@@ -84,7 +91,7 @@ with st.sidebar:
 
 st.markdown("<div class='brandmark'>The agent that can explain why · Open Agent Hackathon</div><div class='hero'><div class='eyebrow'>Retail revenue intelligence</div><h1>Follow the change.<br><em>Find the why.</em></h1><p>Ask a retail revenue question. WhyTrace coordinates specialized agents, runs the queries, challenges the evidence, and verifies every number before it reaches the report.</p></div>", unsafe_allow_html=True)
 
-st.markdown("<div class='section-title'>Start an investigation</div><div class='subtle'>Pick a guided question or ask your own.</div>", unsafe_allow_html=True)
+st.markdown("<div class='section-title'>Start an investigation</div><div class='subtle'>Ask naturally about store revenue, product categories, returns, inventory, or monthly changes in the connected retail data.</div>", unsafe_allow_html=True)
 examples = ["Why did S3 revenue drop in March 2026?", "What drove the March revenue change?", "Did returns explain the March decline?"]
 cols = st.columns(3)
 for idx, (col, example) in enumerate(zip(cols, examples)):
@@ -123,7 +130,7 @@ if report:
     if report["ranked_drivers"]:
         main = report["ranked_drivers"][0]
         metrics = st.columns(3)
-        metrics[0].metric("Lead signal", main.get("store_id", "Revenue"))
+        metrics[0].metric("Lead signal", main.get("subject", main.get("store_id", "Revenue")))
         metrics[1].metric("Focus period", main.get("period", "—"))
         metrics[2].metric("Evidence check", "Verified" if main["verified"] else "Mismatch")
         for rank, claim in enumerate(report["ranked_drivers"], 1):
