@@ -1,0 +1,895 @@
+{
+  "question": "Why did S3 revenue drop in March 2026?",
+  "ranked_drivers": [
+    {
+      "title": "S3 revenue fell sharply in March",
+      "claim": "Store S3 revenue changed from $8,408 in February to $4,699 in March (-44.1%).",
+      "confidence": 0.98,
+      "evidence_ids": [
+        "0990e9b231cdb7d1bb1a"
+      ],
+      "numeric_claims": [
+        {
+          "label": "February S3 revenue",
+          "evidence_id": "0990e9b231cdb7d1bb1a",
+          "row_index": 7,
+          "column": "revenue",
+          "value": "8408.00"
+        },
+        {
+          "label": "March S3 revenue",
+          "evidence_id": "0990e9b231cdb7d1bb1a",
+          "row_index": 8,
+          "column": "revenue",
+          "value": "4699.00"
+        },
+        {
+          "label": "March month-over-month change",
+          "evidence_id": "0990e9b231cdb7d1bb1a",
+          "row_index": 8,
+          "column": "pct_change",
+          "value": -44.11
+        }
+      ],
+      "model": "offline-template",
+      "verified": true,
+      "verification": [
+        {
+          "label": "February S3 revenue",
+          "evidence_id": "0990e9b231cdb7d1bb1a",
+          "row_index": 7,
+          "column": "revenue",
+          "value": "8408.00",
+          "actual": "8408.00",
+          "verified": true
+        },
+        {
+          "label": "March S3 revenue",
+          "evidence_id": "0990e9b231cdb7d1bb1a",
+          "row_index": 8,
+          "column": "revenue",
+          "value": "4699.00",
+          "actual": "4699.00",
+          "verified": true
+        },
+        {
+          "label": "March month-over-month change",
+          "evidence_id": "0990e9b231cdb7d1bb1a",
+          "row_index": 8,
+          "column": "pct_change",
+          "value": -44.11,
+          "actual": -44.11,
+          "verified": true
+        }
+      ]
+    }
+  ],
+  "ruled_out": [
+    {
+      "title": "Electronics returns spike is too small to explain the drop",
+      "claim": "Electronics returns rose from $186 in January to $744 in March; this is small beside S3's revenue decline.",
+      "confidence": 0.97,
+      "evidence_ids": [
+        "afbff3eda7c1e3356962",
+        "0990e9b231cdb7d1bb1a"
+      ],
+      "numeric_claims": [
+        {
+          "label": "January Electronics returns",
+          "evidence_id": "afbff3eda7c1e3356962",
+          "row_index": 3,
+          "column": "return_amount",
+          "value": "186.00"
+        },
+        {
+          "label": "March Electronics returns",
+          "evidence_id": "afbff3eda7c1e3356962",
+          "row_index": 5,
+          "column": "return_amount",
+          "value": "744.00"
+        },
+        {
+          "label": "March S3 revenue decline percent",
+          "evidence_id": "0990e9b231cdb7d1bb1a",
+          "row_index": 8,
+          "column": "pct_change",
+          "value": -44.11
+        }
+      ],
+      "model": "offline-template",
+      "verified": true,
+      "verification": [
+        {
+          "label": "January Electronics returns",
+          "evidence_id": "afbff3eda7c1e3356962",
+          "row_index": 3,
+          "column": "return_amount",
+          "value": "186.00",
+          "actual": "186.00",
+          "verified": true
+        },
+        {
+          "label": "March Electronics returns",
+          "evidence_id": "afbff3eda7c1e3356962",
+          "row_index": 5,
+          "column": "return_amount",
+          "value": "744.00",
+          "actual": "744.00",
+          "verified": true
+        },
+        {
+          "label": "March S3 revenue decline percent",
+          "evidence_id": "0990e9b231cdb7d1bb1a",
+          "row_index": 8,
+          "column": "pct_change",
+          "value": -44.11,
+          "actual": -44.11,
+          "verified": true
+        }
+      ]
+    },
+    {
+      "title": "Product mix shifted not supported as the primary driver",
+      "claim": "This check did not establish a stronger explanation for the S3 March revenue change.",
+      "confidence": 0.75,
+      "evidence_ids": [
+        "c95ea479ba810c05b664"
+      ],
+      "numeric_claims": [],
+      "model": "offline-template",
+      "verified": true,
+      "verification": []
+    },
+    {
+      "title": "Inventory constraint not supported as the primary driver",
+      "claim": "This check did not establish a stronger explanation for the S3 March revenue change.",
+      "confidence": 0.75,
+      "evidence_ids": [
+        "a7739319274162e2bbcd"
+      ],
+      "numeric_claims": [],
+      "model": "offline-template",
+      "verified": true,
+      "verification": []
+    }
+  ],
+  "recommended_actions": [
+    "Review S3's March operating and merchandising changes.",
+    "Check whether the Electronics return spike reflects a quality issue."
+  ],
+  "evidence_ids": [
+    "0990e9b231cdb7d1bb1a",
+    "c95ea479ba810c05b664",
+    "afbff3eda7c1e3356962",
+    "a7739319274162e2bbcd"
+  ],
+  "model_plan": "offline-template",
+  "hypotheses": [
+    {
+      "name": "Store revenue changed",
+      "question": "Compare monthly net sales by store; identify the largest month-over-month decline.",
+      "sql": "WITH monthly AS (SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN store s ON ss.ss_store_sk=s.s_store_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3) SELECT store_id, year, month, revenue, LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month) AS prior_revenue, ROUND(100.0*(revenue-LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month))/NULLIF(LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month),0),2) AS pct_change FROM monthly ORDER BY store_id,year,month",
+      "model": "offline-template",
+      "rows": [
+        {
+          "store_id": "S1",
+          "year": 2026,
+          "month": 1,
+          "revenue": "9341.00",
+          "prior_revenue": null,
+          "pct_change": null
+        },
+        {
+          "store_id": "S1",
+          "year": 2026,
+          "month": 2,
+          "revenue": "8409.00",
+          "prior_revenue": "9341.00",
+          "pct_change": -9.98
+        },
+        {
+          "store_id": "S1",
+          "year": 2026,
+          "month": 3,
+          "revenue": "9315.00",
+          "prior_revenue": "8409.00",
+          "pct_change": 10.77
+        },
+        {
+          "store_id": "S2",
+          "year": 2026,
+          "month": 1,
+          "revenue": "9314.00",
+          "prior_revenue": null,
+          "pct_change": null
+        },
+        {
+          "store_id": "S2",
+          "year": 2026,
+          "month": 2,
+          "revenue": "8395.00",
+          "prior_revenue": "9314.00",
+          "pct_change": -9.87
+        },
+        {
+          "store_id": "S2",
+          "year": 2026,
+          "month": 3,
+          "revenue": "9328.00",
+          "prior_revenue": "8395.00",
+          "pct_change": 11.11
+        },
+        {
+          "store_id": "S3",
+          "year": 2026,
+          "month": 1,
+          "revenue": "9375.00",
+          "prior_revenue": null,
+          "pct_change": null
+        },
+        {
+          "store_id": "S3",
+          "year": 2026,
+          "month": 2,
+          "revenue": "8408.00",
+          "prior_revenue": "9375.00",
+          "pct_change": -10.31
+        },
+        {
+          "store_id": "S3",
+          "year": 2026,
+          "month": 3,
+          "revenue": "4699.00",
+          "prior_revenue": "8408.00",
+          "pct_change": -44.11
+        }
+      ],
+      "evidence": {
+        "evidence_id": "0990e9b231cdb7d1bb1a",
+        "model": "offline-template",
+        "params": [],
+        "row_count": 9,
+        "rows": [
+          {
+            "month": 1,
+            "pct_change": null,
+            "prior_revenue": null,
+            "revenue": "9341.00",
+            "store_id": "S1",
+            "year": 2026
+          },
+          {
+            "month": 2,
+            "pct_change": -9.98,
+            "prior_revenue": "9341.00",
+            "revenue": "8409.00",
+            "store_id": "S1",
+            "year": 2026
+          },
+          {
+            "month": 3,
+            "pct_change": 10.77,
+            "prior_revenue": "8409.00",
+            "revenue": "9315.00",
+            "store_id": "S1",
+            "year": 2026
+          },
+          {
+            "month": 1,
+            "pct_change": null,
+            "prior_revenue": null,
+            "revenue": "9314.00",
+            "store_id": "S2",
+            "year": 2026
+          },
+          {
+            "month": 2,
+            "pct_change": -9.87,
+            "prior_revenue": "9314.00",
+            "revenue": "8395.00",
+            "store_id": "S2",
+            "year": 2026
+          },
+          {
+            "month": 3,
+            "pct_change": 11.11,
+            "prior_revenue": "8395.00",
+            "revenue": "9328.00",
+            "store_id": "S2",
+            "year": 2026
+          },
+          {
+            "month": 1,
+            "pct_change": null,
+            "prior_revenue": null,
+            "revenue": "9375.00",
+            "store_id": "S3",
+            "year": 2026
+          },
+          {
+            "month": 2,
+            "pct_change": -10.31,
+            "prior_revenue": "9375.00",
+            "revenue": "8408.00",
+            "store_id": "S3",
+            "year": 2026
+          },
+          {
+            "month": 3,
+            "pct_change": -44.11,
+            "prior_revenue": "8408.00",
+            "revenue": "4699.00",
+            "store_id": "S3",
+            "year": 2026
+          }
+        ],
+        "source": "zetaris",
+        "sql": "WITH monthly AS (SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN store s ON ss.ss_store_sk=s.s_store_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3) SELECT store_id, year, month, revenue, LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month) AS prior_revenue, ROUND(100.0*(revenue-LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month))/NULLIF(LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month),0),2) AS pct_change FROM monthly ORDER BY store_id,year,month",
+        "timestamp": "2026-10-27T18:47:33.629073+00:00"
+      }
+    },
+    {
+      "name": "Product mix shifted",
+      "question": "Compare monthly sales by item category.",
+      "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN item i ON ss.ss_item_sk=i.i_item_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
+      "model": "offline-template",
+      "rows": [
+        {
+          "category": "Apparel",
+          "year": 2026,
+          "month": 1,
+          "revenue": "9381.00"
+        },
+        {
+          "category": "Apparel",
+          "year": 2026,
+          "month": 2,
+          "revenue": "8391.00"
+        },
+        {
+          "category": "Apparel",
+          "year": 2026,
+          "month": 3,
+          "revenue": "7786.00"
+        },
+        {
+          "category": "Electronics",
+          "year": 2026,
+          "month": 1,
+          "revenue": "9300.00"
+        },
+        {
+          "category": "Electronics",
+          "year": 2026,
+          "month": 2,
+          "revenue": "8427.00"
+        },
+        {
+          "category": "Electronics",
+          "year": 2026,
+          "month": 3,
+          "revenue": "7796.00"
+        },
+        {
+          "category": "Home",
+          "year": 2026,
+          "month": 1,
+          "revenue": "9349.00"
+        },
+        {
+          "category": "Home",
+          "year": 2026,
+          "month": 2,
+          "revenue": "8394.00"
+        },
+        {
+          "category": "Home",
+          "year": 2026,
+          "month": 3,
+          "revenue": "7760.00"
+        }
+      ],
+      "evidence": {
+        "evidence_id": "c95ea479ba810c05b664",
+        "model": "offline-template",
+        "params": [],
+        "row_count": 9,
+        "rows": [
+          {
+            "category": "Apparel",
+            "month": 1,
+            "revenue": "9381.00",
+            "year": 2026
+          },
+          {
+            "category": "Apparel",
+            "month": 2,
+            "revenue": "8391.00",
+            "year": 2026
+          },
+          {
+            "category": "Apparel",
+            "month": 3,
+            "revenue": "7786.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 1,
+            "revenue": "9300.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 2,
+            "revenue": "8427.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 3,
+            "revenue": "7796.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 1,
+            "revenue": "9349.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 2,
+            "revenue": "8394.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 3,
+            "revenue": "7760.00",
+            "year": 2026
+          }
+        ],
+        "source": "zetaris",
+        "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN item i ON ss.ss_item_sk=i.i_item_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
+        "timestamp": "2026-10-27T18:47:33.655591+00:00"
+      }
+    },
+    {
+      "name": "Returns spike",
+      "question": "Compare monthly return amount by item category.",
+      "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(sr.sr_return_amt) AS return_amount FROM store_returns sr JOIN item i ON sr.sr_item_sk=i.i_item_sk JOIN date_dim d ON sr.sr_returned_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
+      "model": "offline-template",
+      "rows": [
+        {
+          "category": "Apparel",
+          "year": 2026,
+          "month": 1,
+          "return_amount": "186.00"
+        },
+        {
+          "category": "Apparel",
+          "year": 2026,
+          "month": 2,
+          "return_amount": "168.00"
+        },
+        {
+          "category": "Apparel",
+          "year": 2026,
+          "month": 3,
+          "return_amount": "186.00"
+        },
+        {
+          "category": "Electronics",
+          "year": 2026,
+          "month": 1,
+          "return_amount": "186.00"
+        },
+        {
+          "category": "Electronics",
+          "year": 2026,
+          "month": 2,
+          "return_amount": "168.00"
+        },
+        {
+          "category": "Electronics",
+          "year": 2026,
+          "month": 3,
+          "return_amount": "744.00"
+        },
+        {
+          "category": "Home",
+          "year": 2026,
+          "month": 1,
+          "return_amount": "186.00"
+        },
+        {
+          "category": "Home",
+          "year": 2026,
+          "month": 2,
+          "return_amount": "168.00"
+        },
+        {
+          "category": "Home",
+          "year": 2026,
+          "month": 3,
+          "return_amount": "186.00"
+        }
+      ],
+      "evidence": {
+        "evidence_id": "afbff3eda7c1e3356962",
+        "model": "offline-template",
+        "params": [],
+        "row_count": 9,
+        "rows": [
+          {
+            "category": "Apparel",
+            "month": 1,
+            "return_amount": "186.00",
+            "year": 2026
+          },
+          {
+            "category": "Apparel",
+            "month": 2,
+            "return_amount": "168.00",
+            "year": 2026
+          },
+          {
+            "category": "Apparel",
+            "month": 3,
+            "return_amount": "186.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 1,
+            "return_amount": "186.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 2,
+            "return_amount": "168.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 3,
+            "return_amount": "744.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 1,
+            "return_amount": "186.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 2,
+            "return_amount": "168.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 3,
+            "return_amount": "186.00",
+            "year": 2026
+          }
+        ],
+        "source": "zetaris",
+        "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(sr.sr_return_amt) AS return_amount FROM store_returns sr JOIN item i ON sr.sr_item_sk=i.i_item_sk JOIN date_dim d ON sr.sr_returned_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
+        "timestamp": "2026-10-27T18:47:33.674167+00:00"
+      }
+    },
+    {
+      "name": "Inventory constraint",
+      "question": "Compare March inventory by store.",
+      "sql": "SELECT s.s_store_id AS store_id, SUM(inv.inv_quantity_on_hand) AS inventory_qty FROM inventory inv JOIN store s ON inv.inv_store_sk=s.s_store_sk JOIN date_dim d ON inv.inv_date_sk=d.d_date_sk WHERE d.d_year=2026 AND d.d_moy=3 GROUP BY 1 ORDER BY 1",
+      "model": "offline-template",
+      "rows": [
+        {
+          "store_id": "S1",
+          "inventory_qty": 9300
+        },
+        {
+          "store_id": "S2",
+          "inventory_qty": 9300
+        },
+        {
+          "store_id": "S3",
+          "inventory_qty": 9300
+        }
+      ],
+      "evidence": {
+        "evidence_id": "a7739319274162e2bbcd",
+        "model": "offline-template",
+        "params": [],
+        "row_count": 3,
+        "rows": [
+          {
+            "inventory_qty": 9300,
+            "store_id": "S1"
+          },
+          {
+            "inventory_qty": 9300,
+            "store_id": "S2"
+          },
+          {
+            "inventory_qty": 9300,
+            "store_id": "S3"
+          }
+        ],
+        "source": "zetaris",
+        "sql": "SELECT s.s_store_id AS store_id, SUM(inv.inv_quantity_on_hand) AS inventory_qty FROM inventory inv JOIN store s ON inv.inv_store_sk=s.s_store_sk JOIN date_dim d ON inv.inv_date_sk=d.d_date_sk WHERE d.d_year=2026 AND d.d_moy=3 GROUP BY 1 ORDER BY 1",
+        "timestamp": "2026-10-27T18:47:33.687758+00:00"
+      }
+    }
+  ],
+  "context": {
+    "evidence": [
+      {
+        "evidence_id": "0990e9b231cdb7d1bb1a",
+        "model": "offline-template",
+        "params": [],
+        "row_count": 9,
+        "rows": [
+          {
+            "month": 1,
+            "pct_change": null,
+            "prior_revenue": null,
+            "revenue": "9341.00",
+            "store_id": "S1",
+            "year": 2026
+          },
+          {
+            "month": 2,
+            "pct_change": -9.98,
+            "prior_revenue": "9341.00",
+            "revenue": "8409.00",
+            "store_id": "S1",
+            "year": 2026
+          },
+          {
+            "month": 3,
+            "pct_change": 10.77,
+            "prior_revenue": "8409.00",
+            "revenue": "9315.00",
+            "store_id": "S1",
+            "year": 2026
+          },
+          {
+            "month": 1,
+            "pct_change": null,
+            "prior_revenue": null,
+            "revenue": "9314.00",
+            "store_id": "S2",
+            "year": 2026
+          },
+          {
+            "month": 2,
+            "pct_change": -9.87,
+            "prior_revenue": "9314.00",
+            "revenue": "8395.00",
+            "store_id": "S2",
+            "year": 2026
+          },
+          {
+            "month": 3,
+            "pct_change": 11.11,
+            "prior_revenue": "8395.00",
+            "revenue": "9328.00",
+            "store_id": "S2",
+            "year": 2026
+          },
+          {
+            "month": 1,
+            "pct_change": null,
+            "prior_revenue": null,
+            "revenue": "9375.00",
+            "store_id": "S3",
+            "year": 2026
+          },
+          {
+            "month": 2,
+            "pct_change": -10.31,
+            "prior_revenue": "9375.00",
+            "revenue": "8408.00",
+            "store_id": "S3",
+            "year": 2026
+          },
+          {
+            "month": 3,
+            "pct_change": -44.11,
+            "prior_revenue": "8408.00",
+            "revenue": "4699.00",
+            "store_id": "S3",
+            "year": 2026
+          }
+        ],
+        "source": "zetaris",
+        "sql": "WITH monthly AS (SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN store s ON ss.ss_store_sk=s.s_store_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3) SELECT store_id, year, month, revenue, LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month) AS prior_revenue, ROUND(100.0*(revenue-LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month))/NULLIF(LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month),0),2) AS pct_change FROM monthly ORDER BY store_id,year,month",
+        "timestamp": "2026-10-27T18:47:33.629073+00:00"
+      },
+      {
+        "evidence_id": "c95ea479ba810c05b664",
+        "model": "offline-template",
+        "params": [],
+        "row_count": 9,
+        "rows": [
+          {
+            "category": "Apparel",
+            "month": 1,
+            "revenue": "9381.00",
+            "year": 2026
+          },
+          {
+            "category": "Apparel",
+            "month": 2,
+            "revenue": "8391.00",
+            "year": 2026
+          },
+          {
+            "category": "Apparel",
+            "month": 3,
+            "revenue": "7786.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 1,
+            "revenue": "9300.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 2,
+            "revenue": "8427.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 3,
+            "revenue": "7796.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 1,
+            "revenue": "9349.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 2,
+            "revenue": "8394.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 3,
+            "revenue": "7760.00",
+            "year": 2026
+          }
+        ],
+        "source": "zetaris",
+        "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN item i ON ss.ss_item_sk=i.i_item_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
+        "timestamp": "2026-10-27T18:47:33.655591+00:00"
+      },
+      {
+        "evidence_id": "afbff3eda7c1e3356962",
+        "model": "offline-template",
+        "params": [],
+        "row_count": 9,
+        "rows": [
+          {
+            "category": "Apparel",
+            "month": 1,
+            "return_amount": "186.00",
+            "year": 2026
+          },
+          {
+            "category": "Apparel",
+            "month": 2,
+            "return_amount": "168.00",
+            "year": 2026
+          },
+          {
+            "category": "Apparel",
+            "month": 3,
+            "return_amount": "186.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 1,
+            "return_amount": "186.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 2,
+            "return_amount": "168.00",
+            "year": 2026
+          },
+          {
+            "category": "Electronics",
+            "month": 3,
+            "return_amount": "744.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 1,
+            "return_amount": "186.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 2,
+            "return_amount": "168.00",
+            "year": 2026
+          },
+          {
+            "category": "Home",
+            "month": 3,
+            "return_amount": "186.00",
+            "year": 2026
+          }
+        ],
+        "source": "zetaris",
+        "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(sr.sr_return_amt) AS return_amount FROM store_returns sr JOIN item i ON sr.sr_item_sk=i.i_item_sk JOIN date_dim d ON sr.sr_returned_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
+        "timestamp": "2026-10-27T18:47:33.674167+00:00"
+      },
+      {
+        "evidence_id": "a7739319274162e2bbcd",
+        "model": "offline-template",
+        "params": [],
+        "row_count": 3,
+        "rows": [
+          {
+            "inventory_qty": 9300,
+            "store_id": "S1"
+          },
+          {
+            "inventory_qty": 9300,
+            "store_id": "S2"
+          },
+          {
+            "inventory_qty": 9300,
+            "store_id": "S3"
+          }
+        ],
+        "source": "zetaris",
+        "sql": "SELECT s.s_store_id AS store_id, SUM(inv.inv_quantity_on_hand) AS inventory_qty FROM inventory inv JOIN store s ON inv.inv_store_sk=s.s_store_sk JOIN date_dim d ON inv.inv_date_sk=d.d_date_sk WHERE d.d_year=2026 AND d.d_moy=3 GROUP BY 1 ORDER BY 1",
+        "timestamp": "2026-10-27T18:47:33.687758+00:00"
+      }
+    ],
+    "provenance": [
+      {
+        "evidence_id": "0990e9b231cdb7d1bb1a",
+        "sql": "WITH monthly AS (SELECT s.s_store_id AS store_id, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN store s ON ss.ss_store_sk=s.s_store_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3) SELECT store_id, year, month, revenue, LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month) AS prior_revenue, ROUND(100.0*(revenue-LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month))/NULLIF(LAG(revenue) OVER (PARTITION BY store_id ORDER BY year,month),0),2) AS pct_change FROM monthly ORDER BY store_id,year,month",
+        "source": "zetaris",
+        "model": "offline-template"
+      },
+      {
+        "evidence_id": "c95ea479ba810c05b664",
+        "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(ss.ss_net_paid) AS revenue FROM store_sales ss JOIN item i ON ss.ss_item_sk=i.i_item_sk JOIN date_dim d ON ss.ss_sold_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
+        "source": "zetaris",
+        "model": "offline-template"
+      },
+      {
+        "evidence_id": "afbff3eda7c1e3356962",
+        "sql": "SELECT i.i_category AS category, d.d_year AS year, d.d_moy AS month, SUM(sr.sr_return_amt) AS return_amount FROM store_returns sr JOIN item i ON sr.sr_item_sk=i.i_item_sk JOIN date_dim d ON sr.sr_returned_date_sk=d.d_date_sk GROUP BY 1,2,3 ORDER BY 1,2,3",
+        "source": "zetaris",
+        "model": "offline-template"
+      },
+      {
+        "evidence_id": "a7739319274162e2bbcd",
+        "sql": "SELECT s.s_store_id AS store_id, SUM(inv.inv_quantity_on_hand) AS inventory_qty FROM inventory inv JOIN store s ON inv.inv_store_sk=s.s_store_sk JOIN date_dim d ON inv.inv_date_sk=d.d_date_sk WHERE d.d_year=2026 AND d.d_moy=3 GROUP BY 1 ORDER BY 1",
+        "source": "zetaris",
+        "model": "offline-template"
+      }
+    ]
+  }
+}
