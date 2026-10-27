@@ -29,7 +29,7 @@ pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
-Run the app with `streamlit run app.py`. By default, `SAMPLE_MODE=true` uses the deterministic local DuckDB dataset. If `METERLESS_RUNTIME_TOKEN` is configured, the agent uses Nightshift for hypothesis planning, SQL generation, and its evidence-grounded explanation while keeping data local. Without a token, it clearly labels and uses the deterministic offline evidence agent. You can try the three sample questions in the app.
+Run the app with `streamlit run app.py`. By default, `SAMPLE_MODE=true` uses the deterministic local DuckDB dataset. If `METERLESS_RUNTIME_TOKEN` is configured, the agent uses Nightshift for hypothesis planning, SQL generation, and its evidence-grounded explanation while keeping data local. Without a token, it clearly labels and uses the deterministic offline evidence agent. You can try the three sample questions in the app. The app has three pages: Overview introduces the workflow, Investigate accepts open-ended retail questions and runs only after you press **Investigate with WhyTrace**, and Visualizations animates trends from the report?s query evidence. Navigation and chart viewing never launch an investigation.
 
 This is a retail analytics agent, not an unrestricted general-purpose chatbot. Its supported evidence is store revenue, item and category sales, returns, and average inventory from the six documented tables; month-over-month analysis requires both months to exist in the source. Ask questions in natural language within that scope, and it routes the lead analysis to the matching evidence type. The three prompt buttons are examples only; the question field is open-ended.
 
